@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "villagerbreedingwatch",
+  "version": "${version}",
+  "name": "村民繁殖观测 / Villager Breeding Watch",
+  "description": "观测村民为什么生、为什么不生：头顶稳定编号与状态、村民到床的彩色射线、单个村民详情、全图出生/失败统计，中英文界面可跟随游戏语言或手动切换。",
+  "authors": [
+    "黑山大叔"
+  ],
+  "contact": {
+    "homepage": "https://space.bilibili.com/19428259"
+  },
+  "license": "MIT",
+  "icon": "assets/villagerbreedingwatch/textures/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.heishandashu.breedingwatch.VbwMod"
+    ],
+    "client": [
+      "com.heishandashu.breedingwatch.client.VbwClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

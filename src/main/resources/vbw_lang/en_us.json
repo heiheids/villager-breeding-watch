@@ -1,0 +1,326 @@
+{
+  "_note": "Villager Breeding Watch - English text. Keys starting with _ are comments and are ignored. {0} {1} are placeholders.",
+  "fmt": {
+    "clock": "Day {0} {1}",
+    "sec": "{0}s",
+    "minsec": "{0}m{1}s"
+  },
+  "ui": {
+    "settings_title": "Breeding Watch - Settings",
+    "stats_title": "Breeding Watch - Statistics",
+    "detail_title": "Breeding Watch - Villager",
+    "t": {
+      "main": "Master switch (whole watch)",
+      "tag": "Name tag (#id + state)",
+      "line": "Bed link rays",
+      "thru": "See through walls",
+      "hud": "Top-left HUD panel",
+      "allline": "Always draw all rays (no radius)",
+      "alltag": "Always show all name tags"
+    },
+    "radius": "Scan radius",
+    "interval": "Refresh interval (ticks)",
+    "reload_lang": "Reload language files",
+    "lang_btn": "Language: {0}",
+    "lang_auto": "Follow game language",
+    "lang_line": "Active: {0}   installed: {1}",
+    "legend_hint": "Green=ok  Orange=drop risk  Gray=>16 blocks  Red=bed gone  Cyan dash=nearest free bed",
+    "open_stats": "Statistics",
+    "done": "Done",
+    "scroll": "line {0}/{1} of {2} (scroll wheel)",
+    "back_settings": "Settings",
+    "tab_overview": "Overview",
+    "tab_failures": "Failures",
+    "tab_villagers": "Villagers",
+    "merchant_btn": "Breeding info",
+    "btn_refresh": "Refresh",
+    "btn_stats": "Statistics",
+    "btn_close": "Close"
+  },
+  "state": {
+    "on": "ON",
+    "off": "OFF"
+  },
+  "hud": {
+    "off1": "Watch is off (N toggle, V settings, B stats)",
+    "legend": "Green=ok bed  Orange=risk  Gray=>16 blocks  Red=bed gone",
+    "keys": "V=settings  B=stats  N=master switch",
+    "state": "State={0}  {1}{2}  radius={3}  every {4}t",
+    "force_lines": "all rays",
+    "force_tags": "all tags",
+    "waiting": "Waiting for server data...",
+    "count": "Watching {0} ({1} can breed)",
+    "allmode": " (always-on: no radius, cap 600)",
+    "server_scan": "server scanned {0}",
+    "stale": " (data stopped updating)",
+    "totals": "Births {0} / Failures {1} / Deaths {2}",
+    "worst": "Top failure: {0}",
+    "no_fail": "No failures recorded"
+  },
+  "st": {
+    "no_stats": "No statistics yet (press N to enable the watch)",
+    "time": "World time: {0}",
+    "births": "Total births: {0}   this scan: {1} villagers",
+    "failures": "Total failures: {0}",
+    "deaths": "Total deaths: {0}",
+    "tracked": "Villagers seen: {0}",
+    "fail_by_code": "By reason:",
+    "none": "(none)",
+    "times": " x{0}",
+    "recent_births": "Recent births:",
+    "birth_line": "#{0} {1}   {2}   tick={3}",
+    "unconfirmed": "(parents unconfirmed)",
+    "parent": "parent: {0}",
+    "place": "at {1} {2} {3} ({0})",
+    "fail_head": "Failures (latest {0}):",
+    "fail_line": "{0}   #{1} {2}   {3}",
+    "fail_code": "code: {0}",
+    "vill_head": "Per villager (sorted by births):",
+    "vill_line": "#{0} {1} ({2})   births {3} / failures {4}   {5}",
+    "present": "present",
+    "absent": "gone",
+    "tab_now": "Tab: {0}"
+  },
+  "legend": {
+    "title": "Ray legend:",
+    "green": "Green solid: bed is properly bound (exists, reachable, within 16, owned)",
+    "orange": "Orange solid: this bed may be dropped at night, or is not owned by this villager",
+    "red": "Red: the HOME bed no longer exists (broken / taken / unloaded)",
+    "gray": "Gray: bed is farther than 16 blocks (outside vanilla validation, ignored when breeding)",
+    "dash": "Dashed: this bed will be dropped when night pathfinding runs (distance / path / tickets)",
+    "cyan": "Cyan dashed: villager has no HOME, pointing at the nearest free bed",
+    "sym": "check = met   X = not met   o = soft hint (does not block breeding)",
+    "right": "The trailing [CODE] is the reason code; changing language will not garble old records"
+  },
+  "d": {
+    "fetching": "Requesting this villager's data from the server...",
+    "title": "#{0} {1} ({2})",
+    "ready": "State: {0}",
+    "not_ready": "State: {0} (cannot breed yet)",
+    "ids": "seq #{0}   entity {1}   UUID {2}",
+    "age": "age {0} ({1})",
+    "age_baby": "baby, {0} until adult",
+    "age_cool": "cooling down, {0} left",
+    "age_ok": "adult, no cooldown",
+    "prof": "profession {0}   level {1}   trades {2}",
+    "empty": "(empty)",
+    "none": "none"
+  },
+  "f": {
+    "head": "Food points {1}/{0} {2}",
+    "sub": "foodLevel {0}   inventory {1}",
+    "rule": "Vanilla rule: foodLevel + inventory nutrition >= 12, not sleeping, age == 0",
+    "inv": "Inventory: {0}",
+    "points": "Per item: {0}"
+  },
+  "b": {
+    "head": "Beds within 48: {0} total, {1} free, {2} probed reachable",
+    "home": "Bound bed: {0}",
+    "home_at": "{0} ({1}, {2} blocks away)",
+    "no_home": "no bound bed (HOME memory empty)",
+    "poi": "POI exists {0}   free tickets {1}   occupied {2}   reachable {3} ({4})",
+    "not_checked": "not checked",
+    "reach_yes": "reachable",
+    "reach_no": "unreachable",
+    "reach_skip": "not probed this scan (budget used up)",
+    "drop": "Drop risk: {0}   {1}",
+    "drop_yes": "yes",
+    "drop_stable": "no",
+    "no_risk": "(no risk reason)",
+    "conflict": "Shared bed: # {0}",
+    "nearest": "Nearest free bed: {0}"
+  },
+  "a": {
+    "head": "Activity: {0}   all activities: {1}",
+    "sched": "schedule {0}   effective {1}",
+    "sched_note": "WORK needs a job site, MEET needs a bell; without the memory the brain falls back to IDLE",
+    "next": "next schedule change in {0}; next idle window in {1}",
+    "in_idle": "already idle",
+    "time": "world time {0} (dayTime={1})",
+    "flags": "sleeping {0}   walking {1}   panicking {2}{3}",
+    "panic": " ({0})",
+    "poi": "raid {0}   job site {1}   bell {2}{3}",
+    "current_marker": "<- current"
+  },
+  "p": {
+    "head": "{0}",
+    "target": "Partner #{0} {1} ({2} blocks)",
+    "no_target": "No partner right now",
+    "obj": "Partner can breed {0}{1}",
+    "obj_missing": "   missing: {0}",
+    "rule": "Vanilla needs: both within 8 blocks, neither has WALK_TARGET, eat food then claim a bed",
+    "courting": "Courting {0} {1}",
+    "courting_at": "started tick={0}, expected birth tick={1}",
+    "last": "Last partner: {0}   result: {1} {2}",
+    "last_tick": "(tick={0})"
+  },
+  "c": {
+    "head": "Conditions (check = hard met, X = hard unmet, o = soft hint):"
+  },
+  "cd": {
+    "adult_ok": "adult",
+    "adult_baby": "still a baby, {0} to grow up",
+    "cool_bad": "breeding cooldown, {0} left",
+    "cool_ok": "no cooldown (next one lasts {0})",
+    "food_ok": "food points {0} >= {3} (foodLevel {1} + inventory {2})",
+    "food_bad": "food points {0} < {3} (foodLevel {1} + inventory {2}), {4} short",
+    "awake_ok": "awake",
+    "awake_bad": "currently sleeping",
+    "act_ok": "now {0} (effective {1}), idle window",
+    "act_bad": "now {0} (schedule {1} / effective {2}), not idle, {3} to go",
+    "calm_ok": "calm",
+    "calm_bad": "panicking: {0}",
+    "raid_ok": "no raid nearby",
+    "raid_bad": "inside a raid",
+    "bedfree_none": "no bed within {0} blocks",
+    "bedfree_full": "{1} beds within {0}, all fully claimed",
+    "bedfree_ok": "{1} beds within {0}, {2} free",
+    "bedreach_none": "{0} free beds, all {1} probed are unreachable",
+    "bedreach_ok": "{0}/{1} probed free beds are reachable",
+    "bedreach_skip": "reachability not probed this scan (budget used up)",
+    "target_has": "partner #{0} {1} ({2} blocks, needs <= {3})",
+    "target_none": "no partner within {0} blocks",
+    "walk_busy": "WALK_TARGET set, this blocks starting a pairing",
+    "walk_free": "no movement target",
+    "home_risk": "{0}",
+    "home_ok": "bound bed {0}",
+    "home_none": "no bound bed",
+    "bell_ok": "bell at {0}",
+    "bell_bad": "no bell (MEETING_POINT memory empty)",
+    "inv_full": "inventory full ({0} slots, {1} nutrition)",
+    "inv_free": "inventory {0}/{1} slots used",
+    "conflict_ok": "no other villager claims this bed",
+    "conflict_bad": "{0} also claims {1}",
+    "reach_bad": "some target is unreachable (CANT_REACH)",
+    "reach_ok": "nothing unreachable",
+    "target_food": "partner lacks food",
+    "tag_ready": "can breed",
+    "tag_ready_no_target": "can breed (waiting)"
+  },
+  "short": {
+    "ADULT": "baby",
+    "COOLDOWN": "cooling",
+    "FOOD": "needs food",
+    "AWAKE": "sleeping",
+    "ACTIVITY": "not idle",
+    "CALM": "panicking",
+    "RAID": "raid",
+    "BED_FREE": "no free bed",
+    "BED_REACH": "bed unreachable",
+    "TARGET": "no partner",
+    "WALK_BUSY": "walking",
+    "HOME_BIND": "bed will drop",
+    "BELL": "no bell",
+    "INV_FULL": "bag full",
+    "BED_CONFLICT": "bed shared",
+    "CANT_REACH": "unreachable"
+  },
+  "cond": {
+    "ADULT": "adult",
+    "COOLDOWN": "breeding cooldown",
+    "FOOD": "food",
+    "AWAKE": "awake",
+    "ACTIVITY": "idle window",
+    "CALM": "calm",
+    "RAID": "no raid",
+    "BED_FREE": "free bed",
+    "BED_REACH": "bed reachable",
+    "TARGET": "partner",
+    "WALK_BUSY": "movement target",
+    "HOME_BIND": "bound bed stable",
+    "BELL": "bell (meeting point)",
+    "INV_FULL": "inventory space",
+    "BED_CONFLICT": "shared bed",
+    "CANT_REACH": "nothing unreachable",
+    "TARGET_LOST": "partner lost/timeout",
+    "MATE_TIMEOUT": "courtship timeout",
+    "SLEEPING": "fell asleep while courting",
+    "PANIC": "panicked while courting",
+    "NO_BED": "no bed",
+    "ALL_BEDS_TAKEN": "all beds claimed",
+    "BED_UNREACHABLE": "bed unreachable"
+  },
+  "tag": {
+    "missing": "X missing {0}",
+    "food_missing": "needs {0} more food",
+    "ready_full": "all hard conditions met"
+  },
+  "risk": {
+    "poi_gone": "bed no longer exists",
+    "far": "{0} blocks away (over {1})",
+    "occupied": "bed occupied by another villager",
+    "tickets": "{0} free tickets left (not exclusive)",
+    "unreachable": "cannot be pathfound"
+  },
+  "ev": {
+    "panic_hostile": "{0} nearby ({1} blocks)",
+    "hurt": "was just hit",
+    "hurt_plus": ", and HURT_BY memory is still set"
+  },
+  "fail": {
+    "TARGET_LOST": {
+      "detail": "never closed in during courtship (distance stayed over 2.24 blocks); vanilla gives up after 350 ticks"
+    },
+    "MATE_TIMEOUT": {
+      "detail": "courtship ran the full {0} ticks without a birth"
+    },
+    "SLEEPING": {
+      "detail": "one of them fell asleep during courtship"
+    },
+    "PANIC": {
+      "detail": "was attacked, or a hostile was nearby, during courtship"
+    },
+    "NO_BED": {
+      "detail": "no bed POI within {0} blocks"
+    },
+    "ALL_BEDS_TAKEN": {
+      "detail": "all {0} beds are fully claimed (maxTickets=1 each)"
+    },
+    "BED_UNREACHABLE": {
+      "detail": "none of the {0} free beds can be reached"
+    },
+    "eaten": " [{0} food {1}->{2}; {3} food {4}->{5}]",
+    "wasted_food": "food was eaten but no baby appeared",
+    "with_target": " (partner #{0} {1})"
+  },
+  "out": {
+    "courting": "courting",
+    "fail": "failed: {0}",
+    "birth": "birthed #{0}"
+  },
+  "list": {
+    "sep": ", ",
+    "sep2": "; "
+  },
+  "prof": {
+    "none": "unemployed",
+    "unemployed": "unemployed",
+    "nitwit": "nitwit",
+    "farmer": "farmer",
+    "fisherman": "fisherman",
+    "shepherd": "shepherd",
+    "fletcher": "fletcher",
+    "librarian": "librarian",
+    "cartographer": "cartographer",
+    "cleric": "cleric",
+    "armorer": "armorer",
+    "mason": "mason",
+    "butcher": "butcher",
+    "leatherworker": "leatherworker",
+    "toolsmith": "toolsmith",
+    "weaponsmith": "weaponsmith"
+  },
+  "act": {
+    "none": "none",
+    "idle": "idle",
+    "work": "work",
+    "meet": "meet (bell)",
+    "rest": "rest",
+    "panic": "panic",
+    "pre_raid": "pre-raid",
+    "raid": "raid",
+    "hide": "hide",
+    "play": "play",
+    "core": "core"
+  }
+}

@@ -1,0 +1,266 @@
+村民繁殖观测（Villager Breeding Watch）· 技术说明
+================================================
+适用环境：Minecraft 26.3 · Fabric Loader 0.19.5 · Fabric API 0.162.0+26.3
+          Loom 1.18.4 · Gradle 9.7.1 · JDK 25
+
+一、设计原则
+------------------------------------------------
+1. 模块化，禁止单页面海量代码。一个包一类职责，任何单个文件不承载两件事：
+   i18n / json / view / net / server / client / client.ui 七个包，各管一段。
+2. 客户端与服务端分离（Loom 的 `splitEnvironmentSourceSets()`）：
+   `src/main` 只放公共与服务端逻辑，`src/client` 只放界面 / 渲染 / 按键。
+   公共源码集不 import 任何 `net.minecraft.client.*` 或 `net.fabricmc...api.client.*`
+   —— 这条由 `tools/check-jar.ps1` 自动校验，防的是"专用服务端加载客户端类直接崩"。
+3. 尽量少第三方依赖：**除 Minecraft / Fabric Loader / Fabric API 外零额外依赖**。
+   JSON 用游戏自带的 Gson（26.3 的 `com.google.code.gson:gson:2.14.0` 已在运行时列表里）。
+4. 多语言是一等公民：代码里不写面向用户的整句，全部走 `Lang.t(key)` / `Lang.f(key, args)`。
+
+
+二、目录结构
+------------------------------------------------
+```
+src/main/java/com/heishandashu/breedingwatch/
+  VbwMod.java                 公共入口：只做接线（语言、网络、服务端事件）
+  i18n/Lang.java              多语言：释放/加载/合并语言文件、占位符、按玩家语言
+  json/Json.java              Gson 实例（存盘用带缩进 / 网络用紧凑）+ 时间格式化
+  view/Views.java             服务端 -> 客户端的快照 DTO（全部 record）
+  net/Payloads.java           三个 JSON 文本包（Sync / Ui / Cmd）
+  net/VbwNetworking.java      信道注册 + 服务端接收器 + 客户端接收器挂钩
+  server/Cond.java            条件码常量 + 显示名（token 与文案分离）
+  server/StatsStore.java      出生/失败/死亡统计 + UUID->稳定编号，存盘
+  server/Eval.java            单个村民的条件评估 + 寻路探针（带预算）
+  server/WatchServer.java     按玩家偏好扫描、分包推送、配对状态机、失败推断
+  server/ServerHooks.java     服务端事件接线（tick / 登录 / 死亡 / 右键 / 停服）
+
+src/client/java/com/heishandashu/breedingwatch/client/
+  VbwClient.java              客户端入口：按键、网络接收器、子系统接线
+  ClientHub.java              客户端状态中枢：设置、缓存、双向通信、世界进出
+  ClientSettings.java         客户端设置读写（config/villagerbreedingwatch/client.json）
+  ClientData.java             快照缓存（合并而非替换）+ 分包重组
+  HUD.java                    左上角面板（HudElementRegistry）
+  BedLines.java               村民->床 射线（Gizmos）
+  NameTags.java               村民头顶文字（Gizmos.billboardTextOverMob）
+  MerchantHook.java           交易界面里的"繁殖详情"按钮
+  client/ui/TextScreen.java   文本滚动界面基类（提取式渲染 + 折行 + 符号）
+  client/ui/SettingsScreen.java   设置界面（宽屏两列 / 窄屏单列）
+  client/ui/StatsScreen.java      统计界面（三个标签）
+  client/ui/DetailScreen.java     单个村民详情
+  client/ui/ProfNames.java        职业/活动 id -> 显示名
+
+src/main/resources/
+  fabric.mod.json             入口点、作者、主页、依赖（26.x 必须写这里）
+  vbw_lang/{zh_cn,en_us}.json 自绘界面的文案（261 个键，两边键集一致）
+  assets/villagerbreedingwatch/lang/{zh_cn,en_us}.json
+                              原版界面读的标准语言文件（按键绑定、分类标题，仅 4 个带前缀的键）
+  assets/villagerbreedingwatch/textures/icon.png   图标（128x128）
+
+tools/
+  build.ps1                   构建（固定 JDK 25 + 工程内 GRADLE_USER_HOME，可 --offline）
+  check-jar.ps1               产物自检（入口点/语言键集/未误打包/公共侧不引客户端）
+  IconGen.java                图标生成器（Java2D，无第三方库）
+```
+
+单文件职责举例：`WatchServer` 只管"扫谁、发给谁、配对怎么推进"，
+具体某个村民能不能生的判定全在 `Eval`；文案全在语言文件；DTO 全在 `Views`。
+
+
+三、26.3 的关键 API 事实（全部读 jar 核对，非记忆）
+------------------------------------------------
+这一类移植最容易"编译不过"或"编译过关但运行没反应"，逐条记下：
+
+1. **渲染模型换成"描述这一帧"**
+   - `GuiGraphics` -> `GuiGraphicsExtractor`
+   - `Screen#render(...)` -> `Screen#extractRenderState(...)`（重写 `render` 能编译，但永远不被调用）
+   - `drawString` / `drawCenteredString` -> `text(...)` / `centeredText(...)`
+   - `Minecraft#setScreen` -> `Minecraft.getInstance().gui.setScreen(...)`
+
+2. **世界空间绘制改成 Gizmos**
+   - `net.minecraft.gizmos.Gizmos.line(Vec3, Vec3, int)` / `cuboid(AABB, GizmoStyle)` /
+     `billboardTextOverMob(Entity, int, String, int, float)`
+   - 回调入口：Fabric `LevelRenderEvents.BEFORE_GIZMOS`（此时收集器开着）
+   - `Gizmos` 是 **保留式**（retained）而非立即绘制：实例带过期时间，
+     drain 时会把未过期的再画一遍。对静止目标无影响；对每帧都在动的目标，
+     如果自己再叠加历史实例会看到残影 —— 本模组每帧只提交一次，没有叠加。
+   - 没有 NeoForge 的 `RenderNameTagEvent`，Fabric 也没有等价钩子
+     （已逐个扫描 fabric-api 全部 jar）。所以头顶文字走 `billboardTextOverMob`。
+
+3. **HUD 钩子**
+   - `HudElementRegistry.addLast(Identifier, HudElement)`，回调是
+     `extractRenderState(GuiGraphicsExtractor, DeltaTracker)`；`HudRenderCallback` 早已删除。
+
+4. **按键**
+   - `KeyBindingHelper` -> `KeyMappingHelper`
+   - 分类从 String 变成 `KeyMapping.Category`（record，包 Identifier），
+     语言键是 `key.category.<命名空间>.<路径>`
+   - 26.3 的输入层跑在 SDL 上（事件里是 SDL 常量，不是 GLFW 的）。
+     本模组只用 `KeyMapping.consumeClick()`，不直接比常量，天然规避这个坑。
+
+5. **网络**
+   - payload = `record X(String json) implements CustomPacketPayload`，
+     `Type` 只包 Identifier，codec 在注册时挂
+   - **缓冲区类型必须写 `io.netty.buffer.ByteBuf`**：`ByteBufCodecs.STRING_UTF8` 就是
+     `StreamCodec<ByteBuf, String>`，写成 `FriendlyByteBuf` / `RegistryFriendlyByteBuf`
+     都会报"类型不兼容"（这里编译失败过两次）
+   - 注册 API：`PayloadTypeRegistry.clientboundPlay()` / `serverboundPlay()`
+     （不是 `playS2C()` / `playC2S()`）
+   - 发送前用 `canSend(type)` 兜底，对端没装模组时降级而不是抛异常
+
+6. **村民繁殖的事实（26.3 与 1.21.1 的差异已核对）**
+   - `Villager#canBreed()`：`foodLevel + countFoodPointsInInventory() >= 12`
+     且 `!isSleeping()` 且 `getAge() == 0`
+   - **食物点来源换了**：1.21.1 是静态表 `Villager.FOOD_POINTS`；
+     26.3 改成数据组件 `DataComponents.VILLAGER_FOOD -> VillagerFood.nutrition()`，
+     按 `count()` 累加。这是最容易照抄错的一处。
+   - `foodLevel` 仍是 private int，没有访问器 —— 只能反射读；失败时显示"未知"而不是编数字。
+   - `VillagerMakeLove`：跑满 350 刻，出生在 `开始 + 275 + rand(50)`，
+     判定用 `distanceToSqr <= 5`（约 2.24 格），冷却 6000 刻。
+   - `takeVacantBed`：HOME POI、半径 48、每床 maxTickets=1、`createPath(pos,1).canReach()`。
+   - HOME 记忆在超过 16 格时会在夜间校验被丢弃（这就是"床很远就不生"的机制）。
+   - `PoiManager#getFreeTickets` **不存在**了，改读 `getDebugPoiInfo(pos).freeTicketCount()`。
+   - 作息**搬到了数据包**：`data/minecraft/timeline/villager_schedule.json`，
+     关键帧 10 IDLE / 2000 WORK / 9000 MEET / 11000 IDLE / 12000 REST。
+     读取方式：`level.environmentAttributes().getValue(EnvironmentAttributes.VILLAGER_ACTIVITY, pos)`。
+     因为 26.3 没有 `Brain#getSchedule()`，本模组保留一份只读的分段快照用于算"还有多久到空闲期"，
+     数据包被改过时这个数字会不准（不影响其余判定）。
+   - `Level#getGameTime()` 在 26.3 不再公开，改用 `Level#getDefaultClockTime()`。
+
+
+四、数据流
+------------------------------------------------
+1. 客户端按 N/V/B 改设置 -> `ClientHub.pushPrefs()` 发 `Cmd`（JSON：enabled/radius/interval/allLines/allTags/code）
+2. 服务端 `WatchServer.onCommand` 存进 `PREFS`（按玩家 UUID），并回一条 INFO 日志
+3. 每 tick 尾（`ServerTickEvents.END_SERVER_TICK`）遍历在线玩家，按各自间隔扫描
+   - 扫描范围：常开=全图（上限 600 名），否则=半径（上限 112 名）
+   - `Eval.evaluate()` 逐个评估，寻路探测有预算（常开 64 次/轮，普通 24 次/轮）
+   - 结果按 80 名/包分片，`Snapshot.part/parts` 标明；统计只在 part 0 带
+4. 客户端 `ClientData.accept()` **合并**而非替换（关键，见踩坑文档），
+   并按 `levelId@gameTime` 重组分片
+5. 渲染层每帧从 `ClientData.all()` 取数据，画 HUD / 射线 / 头顶文字
+
+
+五、数据文件格式
+------------------------------------------------
+1. `config\villagerbreedingwatch\client.json`（客户端设置）
+   ```json
+   { "enabled": false, "nametags": true, "bedLines": true, "seeThrough": true,
+     "hud": true, "allLines": false, "allTags": false, "language": "",
+     "radius": 48, "interval": 10 }
+   ```
+2. `config\villagerbreedingwatch\lang\<code>.json`（语言文件）
+   支持嵌套对象或扁平键；`_` 开头为注释；`{0}` `{1}` 为占位符。
+3. `saves\<世界名>\villager_breeding_watch.json`（统计，与 1.21.1 版本同名同结构）
+   ```json
+   { "nextSeq": 13, "seqByUuid": {"<uuid>": 12}, "names": {"12": "村民"},
+     "professions": {"12": "farmer"}, "counts": {"12": [1, 2]},
+     "totalBirths": 5, "totalFailures": 3, "totalDeaths": 0,
+     "failByCode": {"NO_BED": 3},
+     "births": [...], "failures": [...],
+     "lastPartnerSeq": {...}, "lastPartnerOutcome": {...}, "lastPartnerTick": {...} }
+   ```
+   注意 `failures[].code` 存的是 token（`NO_BED` 等），**不是**翻译后的句子；
+   换语言时只换显示，历史记录不会变成另一种语言，也不会破坏按原因聚合。
+
+
+五点五、两套语言文件必须都交（踩过）
+------------------------------------------------
+Minecraft 里存在两套互不相干的文案来源，只做一套就会出问题：
+
+1. `assets/<modid>/lang/<code>.json` —— **原版界面**读取的那一套。
+   `Component.translatable("key.<modid>.settings")` 走的是它。
+   凡是"原版 UI 会显示的东西"（按键绑定列表、按键分类标题，
+   以及未来的物品名 / 配置项标题）都必须写在这里。
+   键名规则（读 jar 内原版文件核对过）：
+   - 按键：`key.<modid>.<名字>`，与 `new KeyMapping("key.<modid>.<名字>", …)` 一致
+   - 分类：`key.category.<modid>.<名字>`，由 `KeyMapping.Category#label()` 调用
+     `Identifier#toLanguageKey("key.category")` 得到；
+     对照原版的 `key.category.minecraft.movement` 即可确认格式
+
+2. 模组自己的文案目录（本工程是 `vbw_lang/`）—— 只有 `Lang.t()` 读它，
+   用于自绘的设置 / 统计 / 详情界面。
+
+两个关键约束：
+- **键空间不同**：标准语言文件是**全局命名空间**（所有模组与原版共享），
+  所以里面只能放带模组前缀的键；自绘界面的通用键（`ui.done`、`st.none` …）
+  一旦写进标准文件就可能和别人撞键，症状是"某处文案莫名变了"，极难定位。
+- **漏做第 1 套的症状**：按键绑定界面直接把 `key.villagerbreedingwatch.settings`
+  这样的原始键名显示出来，而模组自绘界面一切正常 —— 因为两套文件是独立的。
+
+
+六、统计口径（哪些是确定的，哪些是推断）
+------------------------------------------------
+确定的（来自原版事件或状态）：
+- 出生：婴儿实体加入世界且 `age <= -23990`（刚出生），附近 4 格内有 2 名成年村民
+  且 `age > 5000` 时视为父母，否则标记「父母未确认」。僵尸村民治愈、袭击生成、
+  村庄初始生成不会计入（找不到父母就丢弃）。
+- 死亡：`ServerLivingEntityEvents.AFTER_DEATH` 且实体是村民。
+- 编号：UUID 首次被观测到时分配自增编号，持久化，跨重启稳定。
+
+推断的（原版不广播，只能从状态倒推）：
+- 求爱开始：双方 `BREED_TARGET` 互相指向对方。
+- 求爱失败：配对消失 / 超时（350+80 刻）时，按"从没靠近过（>2.24 格）"、
+  "靠近过但跑了 350 刻"、"过程中有睡着"、"过程中受惊"依次归类。
+- 取床失败：在 `开始 + 275` 刻检查当时 48 格内的床（总数 / 空位数 / 前 4 张可达性），
+  若已经吃掉食物却没有婴儿，就记一条失败并注明"食物已被吃掉但没有婴儿"。
+  这正是"投喂足够却不生"最常见、也最难自己看出来的原因。
+
+
+七、性能与安全边界
+------------------------------------------------
+1. 寻路是唯一可能拖垮服务端的东西：`Eval.Probe` 带 TTL 缓存（200 刻）+ 每轮预算，
+   预算耗尽返回 `null`（表示"本次未测"，界面显示"未检测"而不是"不可达"）。
+2. 常开模式扫描间隔下限 20 刻，上限 600 名村民。
+3. 所有渲染与统计路径都包在 try/catch 里：诊断功能出问题的最大代价必须是
+   "这一帧没有线 / 这一轮没有数据"，绝不能把游戏带走。
+4. 统计数据有容量上限：历史明细各 500 条、推送各 60 条；
+   出生去重集合有界（4000），不会无限增长。
+
+
+七之二、时间与节拍：两个必须遵守的硬规则
+------------------------------------------------
+第一版在真机上表现为"一直等待服务器数据、什么都不显示"，根因是两条关于时间的规则被违反。
+这里写成硬规则，任何后续改动都必须遵守：
+
+1. **不要用哨兵值参与算术。**
+   "从未发生过"要用 `null` / map 里没有该键 / 布尔量表达，
+   绝不要写成 `Long.MIN_VALUE` 再算 `now - last`：
+   `now - Long.MIN_VALUE` 在 64 位下溢出为负数，`负数 < gate` 恒成立，
+   于是每一 tick 都跳过，功能"静默永不发生"。
+   - 扫描闸门：`Long last = LAST_SCAN.get(uuid); if (last != null && tickNow - last < gate) ...`
+   - 存档自动保存：`boolean savedOnce`，而不是 `lastSave = Long.MIN_VALUE`
+
+2. **节拍只认服务器 tick 计数，不认世界/维度时钟。**
+   `server.getTickCount()` 单调递增，适合做"多久一次"。
+   维度时钟（`Level#getDefaultClockTime()`）只适合展示"现在游戏内几点"：
+   下界与末地是固定时间维度（`has_fixed_time: true`，下界还没有 `default_clock`），
+   其取值恒为 0，拿它做闸门会导致"只扫一次、之后再也不扫"，且只在非主世界复现。
+   客户端同理：判断"数据是否过期"要用收到包的墙钟时间（`lastSnapshotMillis`），
+   不能用世界时间，否则进下界后 HUD 会永远显示"数据已停止更新"。
+
+
+八、构建与自检
+------------------------------------------------
+```
+powershell -ExecutionPolicy Bypass -File 源码\tools\build.ps1            # 联网
+powershell -ExecutionPolicy Bypass -File 源码\tools\build.ps1 -Offline   # 离线（缓存已预热）
+powershell -ExecutionPolicy Bypass -File 源码\tools\check-jar.ps1        # 产物自检
+powershell -ExecutionPolicy Bypass -File 源码\tools\check-source.ps1     # 源码防回归
+java 源码\tools\RegressionTest.java                                      # 时间闸门回归断言
+powershell -ExecutionPolicy Bypass -File 源码\tools\diag-log.ps1         # 日志链路诊断
+```
+四道检查各有分工，缺一不可：
+- `check-jar.ps1`：入口点、语言键集、有没有误打包——**产物层面**的问题
+- `check-source.ps1`：哨兵值、维度时钟做闸门、`render` vs `extractRenderState`、
+  公共侧引用客户端类——**源码层面**的静默失效模式
+- `RegressionTest.java`：把已经踩过的时间闸门 bug 固定成可执行断言（含反证）
+- `diag-log.ps1`：运行时链路断点定位，按"加载 → 就绪 → 发开关 → 收开关 → 扫描 → 收快照"
+  的顺序报第一个缺口
+
+- 构建脚本把 `GRADLE_USER_HOME` 指向 `源码\.gradle-home`，
+  工程外不产生任何缓存；里面已预置 26.3 的 Loom 缓存（约 2.5 GB，可离线）。
+- 注意：`gradle.properties` 必须是纯 ASCII（Gradle 按 ISO-8859-1 读），
+  写中文注释会变成乱码并可能污染路径参数。
+- 注意：`tools\*.ps1` 必须存成 **UTF-8 with BOM**，
+  否则 PowerShell 5.1 按 ANSI 解码中文注释，会报与真实语法无关的解析错误。
+- 注意：`latest.log` 在中文 Windows 上是 **GBK/936**，读日志要按 GBK 解码。
+- 26.x 的构建脚本形态：插件 `net.fabricmc.fabric-loom`（无 `-remap`）、
+  不写 `mappings`、依赖用 `implementation` 而不是 `modImplementation`。

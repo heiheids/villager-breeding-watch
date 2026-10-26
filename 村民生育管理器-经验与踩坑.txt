@@ -1,0 +1,276 @@
+村民繁殖管理器 · 经验与踩坑记录
+================================================
+适用环境：Minecraft 26.3 · Fabric Loader 0.19.5 · Fabric API 0.162.0/0.163.0
+          Loom 1.18.4 · Gradle 9.7.1 · JDK 25 · Windows
+来源：把一份 1.21.1 NeoForge 工程（村民繁殖观测 1.0.0）整体迁移到 26.3 Fabric 的全过程。
+
+写给下一个接手的人 / 智能体：下面每一条都是这次真实撞到的，按"能不能自己查出来"排序，
+越靠前越容易浪费时间。结论都标注了依据。
+
+
+────────────────────────────────────────────────
+零、真机复测暴露的致命 bug（迁移当天就踩了，务必先看这一段）
+────────────────────────────────────────────────
+0.1 **用 `Long.MIN_VALUE` 当"从未发生"的哨兵，再做时间差 —— 必然整型溢出。**
+    现场：客户端 HUD 永远停在"等待服务器数据…"，屏幕上什么都不画。
+    日志：`已发送客户端开关给服务器` ✓、`收到 ... 的开关` ✓、`统计文件不存在` ✓，
+          但**完全没有** `扫描=N 名村民` 那一行。
+    代码：`LAST_SCAN.getOrDefault(uuid, Long.MIN_VALUE)`，然后
+          `if (now - last < gate) continue;`
+    数学：`now - Long.MIN_VALUE` 在 64 位下溢出，结果仍是负数，
+          负数恒小于 gate（正数），于是**每一 tick 都 continue**，扫描从未发生。
+    〔实测〕已写 `tools\OverflowProof.java` 打印四个时间点的 `now-last`，全为负。
+    修法：用"map 里有没有这条记录"表达"从未扫描"，
+          `Long last = map.get(k); if (last != null && tickNow - last < gate) continue;`
+          **值不参与任何算术**。同一个坑在 `StatsStore.lastSave`（自动保存）上也存在，一并改成
+          `boolean savedOnce`。
+    教训：**"哨兵值"和"算术"混用是定时炸弹**。凡是要参与减法的时间戳，
+    初值必须是一个真实存在的、接近当前时刻的值；表达"没有"就用 null / Optional / 布尔量。
+
+0.2 **用维度时钟做节拍，下界/末地会静默失效。**
+    修好 0.1 之后紧接着发现的第二个同类 bug：
+    `long now = sp.level().getDefaultClockTime();` 做扫描闸门。
+    但 26.3 的 `data/minecraft/dimension_type/the_nether.json` 里**没有 `default_clock`**，
+    且有 `has_fixed_time: true` —— 下界的 `getDefaultClockTime()` 恒为 0。
+    后果：进下界后扫一次，之后 `0 - 0 < gate` 恒成立，再也不扫；
+    而且这个 bug 只在非主世界复现，主世界测试完全看不出来。
+    〔实测〕读 jar 内维度 json 核对；末地同理（`the_end` 有 default_clock 但 `has_fixed_time`）。
+    修法：节拍一律用 `server.getTickCount()`（单调递增的服务器 tick 计数），
+          **不要用世界/维度时钟做任何"多久一次"的判断**。
+    维度时钟只适合"现在游戏内是几点"这类展示用途。
+
+0.3 **客户端的"数据是否过期"同样不能用世界时间。**
+    `HUD` 里原本写 `fresh = levelTime - snap.gameTime() <= interval + 6`，
+    进下界后 `levelTime` 恒 0，会永远显示"（数据已停止更新）"。
+    修法：客户端记录 `lastSnapshotMillis`（收到包的墙钟时间），
+          用 `System.currentTimeMillis() - lastSnapshotMillis` 判断，阈值取 `刻数 × 50 ms`。
+
+0.4 **这类 bug 的共同特征：编译通过、无异常、日志不报错，只是"什么都不发生"。**
+    所以必须靠**可执行断言 + 源码模式扫描**兜住，不能靠肉眼审代码：
+    - `tools\RegressionTest.java`：把事故的两个根因写成断言（含"旧写法确实会溢出"的反证）
+    - `tools\check-source.ps1`：扫描 `Long.MIN_VALUE` 哨兵、维度时钟做闸门、
+      `render` vs `extractRenderState`、公共源码集是否引用客户端类
+    - `tools\diag-log.ps1`：按链路顺序读日志，第一次断在哪一步就报哪一步
+
+0.5 **日志编码：Minecraft 在中文 Windows 上写的 `latest.log` 是 GBK/936，不是 UTF-8。**
+    用 `Get-Content -Encoding UTF8` 读会把中文变乱码，
+    于是"按中文关键字匹配日志"永远失败（我第一版诊断脚本就因此误判成"模组没加载"）。
+    修法：先按 UTF-8 解，若不含预期中文再按 `Encoding.GetEncoding(936)` 解；
+    或直接只匹配 `[VBW]` 这个 ASCII 标记 + 其中稳定的英文/数字部分。
+
+0.6 **"按键绑定界面直接显示原始翻译键"——漏了 Minecraft 标准语言文件。**
+    现象（真机截图）：按键绑定列表里三行显示成
+    `key.villagerbreedingwatch.settings` / `.stats` / `.toggle`，
+    分类标题显示成 `key.category.villagerbreedingwatch.main`。
+    根因：**Minecraft 里存在两套互不相干的文案文件**：
+      a) `assets/<modid>/lang/<code>.json` —— **原版界面**（按键绑定、物品名、
+         tooltip、Mod Menu 等）通过 `Component.translatable(key)` 读的就是这一套；
+      b) 模组自绘界面的文案（本工程放在 `vbw_lang/`）—— 只有自己的 `Lang.t()` 读它。
+    我只做了 (b)，于是自绘的设置/统计/详情界面中文正常，
+    但原版按键绑定界面找不到键，直接把键名原样显示出来。
+    修法：补 `assets/villagerbreedingwatch/lang/{zh_cn,en_us}.json`，
+         只放会被原版界面读取的键：
+           key.category.villagerbreedingwatch.main   （分类标题）
+           key.villagerbreedingwatch.settings / .stats / .toggle
+    键名格式已核对 jar 内原版文件：`key.category.minecraft.movement` 对应
+    `KeyMapping.Category(Identifier.minecraft:movement)`，
+    即 `Identifier#toLanguageKey("key.category")` = `key.category.<namespace>.<path>`。
+    〔实测〕`KeyMapping$Category#label()` 的字节码确实是
+    `Component.translatable(id.toLanguageKey("key.category"))`。
+
+0.7 **标准语言文件是全局键空间，没有命名空间隔离。**
+    `assets/<modid>/lang/*.json` 的键是全游戏共享的，
+    所以**只能放带模组前缀的键**（`key.<modid>.*`、`<modid>.*`）。
+    绝对不要把自绘界面的通用键（`ui.done`、`ui.settings_title`、`st.none` 之类）
+    也塞进去 —— 那会和别的模组甚至原版撞键，症状是"某个界面文案莫名变成别的东西"，
+    而且极难定位。
+    自检脚本 `check-jar.ps1` 现在有一条专门断言：
+    标准语言文件里除 `key.category.<modid>.*` / `key.<modid>.*` 之外的键一律报错。
+
+0.8 **教训：一个"语言"需求实际上要交两套文件。**
+    只要模组有原版界面会读的键（按键绑定、配置项的标题、物品/方块名），
+    就必须交 `assets/<modid>/lang/`；
+    只要模组有自己的自绘界面，就还要一套自己的文案。
+    两者可以共用同一份内容源，但**文件位置和键空间都不一样**，不能只做一套。
+
+
+────────────────────────────────────────────────
+一、构建链：先把它跑通，再写一行代码
+────────────────────────────────────────────────
+1. **固定工具链，别用系统默认 Java。**
+   本机 `where java` 只有一个 JDK 17，而 26.3 需要 JDK 25；
+   JDK 25 当时藏在另一个工程目录里，不在 PATH 上。
+   做法：构建脚本自动定位 JDK 25（`-Jdk` 参数 → `JAVA_HOME` →
+   `.gradle-home\jdks` 下的 toolchain → PATH），只用满足条件的那一个，
+   并把 `JAVA_HOME` 与 `PATH` 显式设好，不依赖调用者的环境。
+   〔实测〕JDK 17 直接跑会得到与源码无关的插件解析错误，几乎不可读。
+
+2. **GRADLE_USER_HOME 指到工程目录内，并在里面预置 26.3 的 Loom 缓存。**
+   本机只有 10808 代理能出去，且那个代理这次是关着的 —— 也就是**必须离线构建**。
+   离线能成的唯一原因是缓存已被另一个 26.3 工程预热过（含 `minecraft-merged.jar`）。
+   robocopy 复制 2.5 GB 缓存进工程，之后 `--offline` 一次过。
+   〔实测〕`--offline` + 预热缓存 = 第一次构建 34 秒（含 Loom 配置）。
+
+3. **`gradle.properties` 必须是纯 ASCII。**
+   Gradle 用 `java.util.Properties`（Latin-1）读它，中文注释会变成乱码；
+   如果乱码出现在路径类参数里会更糟（会变成非法路径导致 JVM 启动失败）。
+   〔实测〕这次先把中文注释写进 `gradle.properties`，读出来是"鏉戞皯绻佹畺…"，
+   改成纯英文注释后正常。**代码注释可以中文，这个文件不行。**
+
+4. **PowerShell 5.1 读无 BOM 的 .ps1 会按 ANSI 解码。**
+   中文注释乱码后可能把后面的引号/括号吃掉，报的是"Unexpected token ')'"，
+   和真正的语法错误完全无关。修法：脚本统一存成 **UTF-8 with BOM**。
+   〔实测〕`check-jar.ps1` 一开始就是这个原因解析失败。
+
+5. **用 `write`/文本工具生成 Java 源文件时注意 BOM。**
+   带 BOM 的 `.java` 会报 `非法字符: '\ufeff'`。用 `Set-Content -Encoding UTF8`
+   在 PS 5.1 下**就是带 BOM 的**，改文件要显式用
+   `New-Object System.Text.UTF8Encoding($false)`。
+
+6. **先搭空模组跑通 `build`，再往里填代码。**
+   这次顺序是：空入口点 -> `compileJava` 通过 -> 公共层 -> `compileClientJava` -> 全量 build。
+   每一步失败都能立刻定位到"是构建链问题还是代码问题"。
+
+
+────────────────────────────────────────────────
+二、26.3 的 API：编译器能帮你抓一半，另一半是静默失效
+────────────────────────────────────────────────
+7. **`Screen#render` 在 26.3 不被调用。**
+   重写它能编译、能通过一切静态检查，界面就是一片空白、日志什么都不报。
+   要重写的是 `extractRenderState(GuiGraphicsExtractor, int, int, float)`。
+   〔实测〕这是 26.3 最大的范式变化：从"立即画"改成"描述这一帧"。
+
+8. **网络包的缓冲区类型必须精确。**
+   `ByteBufCodecs.STRING_UTF8` 的签名是 `StreamCodec<ByteBuf, String>`。
+   写 `StreamCodec<FriendlyByteBuf, X>` 或 `RegistryFriendlyByteBuf` 都会报
+   "不存在类型变量O的实例, 以使StreamCodec<...>一致"——这个报错很唬人，实际只是泛型不匹配。
+   注册 API 也换了：`PayloadTypeRegistry.clientboundPlay()` / `serverboundPlay()`，
+   不是 `playS2C()` / `playC2S()`。
+
+9. **26.3 没有"替换原版名牌"的公共钩子。**
+   NeoForge 的 `RenderNameTagEvent` 在 Fabric 侧没有对应物 —— 我逐个扫描了
+   fabric-api 全部 jar 的类名，确认没有任何 NameTag 相关事件。
+   可行路线只有两条：
+   a) 用 `Gizmos.billboardTextOverMob(...)` 在村民头顶"另加"一行（本模组选这个，
+      也是原版自己画头顶浮动文字的实现方式）；
+   b) 自己写 mixin 改 `EntityRenderer` 的名牌渲染（风险与版本维护成本都高）。
+   代价要说清楚：选了 a) 就必须接受"原版名字还在，我们的文字是第二行"，
+   以及"客户端没同步到的实体画不出字"（约 5 区块 / 80 格）。
+
+10. **`Gizmos` 是保留式（retained）而非立即绘制。**
+    每个 gizmo 变成带过期时间的实例，drain 时把未过期的再画一遍。
+    静止目标看不出来；如果每帧为移动目标追加新实例，屏幕上会同时出现 2~3 条历史副本。
+    〔实测〕这条在本机另一个工程里真实踩过（表现为"线是好几条，间距随速度变大"）。
+    本模组的做法：每帧只提交一次，不做任何累积，所以不存在残影。
+
+11. **`PoiManager#getFreeTickets` 在 26.3 已删除。**
+    但床的剩余票数仍然可以拿到：`pm.getDebugPoiInfo(pos)` 返回 `DebugPoiInfo`（可直接为 null，
+    **不是 Optional**），取 `freeTicketCount()`。第一次按 Optional 写会编译失败。
+
+12. **村民食物点的来源变了（最容易照抄错的地方）。**
+    1.21.1：静态表 `Villager.FOOD_POINTS.get(item) * count`。
+    26.3：数据组件 `item.get(DataComponents.VILLAGER_FOOD).nutrition() * count`。
+    而 `foodLevel` 依旧是 private int、没有访问器，只能反射。
+    `Villager#canBreed()` 的字节码是 `foodLevel + countFoodPointsInInventory() >= 12`
+    —— 判定阈值没变，但"怎么数背包"变了。
+
+13. **作息从代码搬到了数据包。**
+    26.3 没有 `Brain#getSchedule()`，村民活动由
+    `data/minecraft/timeline/villager_schedule.json` 定义，运行时读环境属性：
+    `level.environmentAttributes().getValue(EnvironmentAttributes.VILLAGER_ACTIVITY, pos)`。
+    关键帧：10 IDLE / 2000 WORK / 9000 MEET / 11000 IDLE / 12000 REST（与旧版一致）。
+    想算"还有多久到空闲期"就得自己做一份分段快照 —— 这是把"配置挪进数据包"的典型代价：
+    数据驱动的灵活性换来了"代码里不再有权威答案"。
+
+14. **`Level#getGameTime()` 不再公开**，用 `Level#getDefaultClockTime()`。
+    连带 `getDayTime()` 也没了；`dayTime = Math.floorMod(getDefaultClockTime(), 24000)`。
+
+15. **`PlayerInteractEvent` -> `UseEntityCallback`（Fabric）。**
+    注意要自己判 `level.isClientSide()` 与 `InteractionHand.MAIN_HAND`，
+    并且**返回 `InteractionResult.PASS` 而不是 SUCCESS** —— 否则会吞掉原版的"打开交易"。
+
+16. **`ScreenEvent.Init` 没有对应物。**
+    往别人的界面（这里是 `MerchantScreen`）里加控件，用
+    `ScreenEvents.AFTER_INIT` + `Screens.getWidgets(screen).add(widget)`。
+    `ScreenEvents.AFTER_EXTRACT` 这种是**按界面实例**注册的（`afterExtract(screen)`），
+    不是全局的那个常量字段 —— 写成 `ScreenEvents.AFTER_EXTRACT.register(...)` 直接编译不过。
+
+
+────────────────────────────────────────────────
+三、迁移中"看起来能用、其实没生效"的陷阱
+────────────────────────────────────────────────
+17. **客户端入口点必须写进 `fabric.mod.json`。**
+    26.x 的非 remap Loom **不会合并** `src/client/resources/*-client.entrypoints.json`。
+    写在那里面等于没写：按键、界面、渲染全都不生效，且没有任何报错。
+    〔文档 + 实测〕本工程所有入口点都写在 `fabric.mod.json`，并用自检脚本校验。
+
+18. **`splitEnvironmentSourceSets()` 下，公共代码绝不能 import 客户端类。**
+    专用服务端加载到就会 `NoClassDefFoundError`。这类错误只在"别人开服务器"时才出现，
+    自己单机测永远测不到。对策是**自动校验**（`check-jar.ps1` 扫 `src/main` 里的
+    `net.minecraft.client.` / `...api.client.` 引用），而不是靠记性。
+
+19. **PowerShell 里 `@'...'@` 的 here-string 头后面不能有内容。**
+    `@'{ "a": 1 }'@` 一行写完会报 "No characters are allowed after a here-string header"。
+    写 JSON 时要么换行，要么直接用 `'...' | Set-Content`。
+
+20. **`robocopy` 复制大缓存不要放前台。** 2.5 GB 会吃掉整个超时窗口；
+    放后台任务、完成时收通知，期间继续写代码。
+
+
+────────────────────────────────────────────────
+四、仍然成立的老经验（1.21.1 时代踩过，26.3 依然适用）
+────────────────────────────────────────────────
+21. **"全量快照 + 增量包"混在同一通道，客户端必须区分"替换"与"合并"。**
+    服务端每轮推全量扫描结果，但"点某个村民"只推一个详情包。
+    如果客户端每收到一包就整表替换，点开详情就会把全图数据冲掉 ——
+    现场表现是"只有我点的那个村民显示"。修法：一律合并 + 时间戳清理，
+    只有服务端明确发空快照（所有开关关闭）时才立刻清空。
+
+22. **远处实体没同步时，绘制必须用服务端坐标。**
+    客户端只同步约 5 区块内的实体，`level.getEntity(eid)` 对远处村民返回 null。
+    如果代码写 `if (ent == null) continue;`，远处的线就永远不显示。
+    正确做法：快照里带上服务器侧 x/y/z，没实体就用它画。
+    代价是"线会画出来，头顶文字画不出来"——这是引擎边界，要在文档里如实说明，
+    不要假装做到了。
+
+23. **两列布局在窄窗口会完全重叠。**
+    自绘/手摆位置的设置界面必须按宽度降级成单列，否则用户点到的不是他看到的，
+    反馈会是"功能没生效"。判据取 `width >= 420`（GUI 缩放后）。
+
+24. **统计里存 token，不存翻译后的句子。**
+    历史记录一旦存了"缺床"，换到英文界面就没法翻译、也没法按原因聚合。
+    本模组全部存代码令牌（`NO_BED`、`fail:CODE`、`birth:#N`），显示时才查语言表。
+
+25. **诊断类功能出问题的最大代价，必须是"这一轮没有输出"。**
+    所有渲染与统计路径都包 try/catch，错误只记日志。
+    宁可少画一帧线，也不能让玩家退出游戏。
+
+26. **"看不见东西"类问题，先加两侧计数日志再猜。**
+    服务端 `[VBW] 扫描=N 名村民（常开=… 半径=…）`，
+    客户端 `[VBW] 快照 #N：本包 X 名 / 现有 Y 名，常开=…`。
+    有这两个数字，一次测试就能定性是"扫描空"、"开关没到位"还是"客户端没画"。
+    再把同样的信息搬到 HUD 上（"服务器扫到 K 名"），比反复读日志快得多。
+
+
+────────────────────────────────────────────────
+五、这次没能验证的部分（别当结论用）
+────────────────────────────────────────────────
+27. **游戏内实跑只走了一半。** 第一轮真机复测暴露了第 0.1 节的溢出 bug
+    （"一直等待服务器数据"），已修复并通过：
+      - `tools\RegressionTest.java`（9 条断言，含反证）
+      - `tools\check-source.ps1`（5 项模式扫描）
+      - `tools\check-jar.ps1`（产物完整性）
+      - 编译 + 打包 + 安装（哈希一致）
+    **但修复后的"真的能扫到并显示"还没有拿到第二轮真机日志确认。**
+    复测时请先跑 `tools\diag-log.ps1`，它会把链路断点直接指出来。
+
+28. **`billboardTextOverMob` 的 y 偏移量（本模组用 2）是按参数语义估的**，
+    原版对村民用多少没有单独核对。若实机发现文字压在身上或飘得过高，
+    只改 `NameTags.java` 里那一个数字即可。
+
+29. **常开模式的性能上界没有实测。** 预算（64 次寻路/轮）+ 600 名上限是保守取值，
+    真实村庄规模下的 tick 开销需要实测才能确认。
+
+30. **下界/末地的扫描行为未实机验证。** 0.2 的修复是按"读 jar 内维度 json + 时钟语义"
+    推导的（维度时钟恒 0 → 改用 tick 计数），逻辑上已闭环，
+    但没有真的在下界待一段时间看日志确认。复测清单里建议加上这一项。

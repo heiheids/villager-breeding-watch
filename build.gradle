@@ -1,0 +1,57 @@
+// 村民繁殖观测 / Villager Breeding Watch —— Minecraft 26.3 Fabric
+// 26.x 起 Minecraft 本体不再混淆，因此：
+//   * 插件用不重映射的 net.fabricmc.fabric-loom
+//   * 不写 mappings
+//   * 依赖用 implementation 而不是 modImplementation
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+base {
+    archivesName = "${project.archives_base_name}-fabric-${project.minecraft_version}"
+}
+
+// 客户端与服务端分离：界面 / 渲染 / 按键只进客户端源码集，专用服务端不会加载它们。
+loom {
+    splitEnvironmentSourceSets()
+
+    mods {
+        "villagerbreedingwatch" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+
+processResources {
+    def props = [version: project.version]
+    inputs.properties props
+    filteringCharset = 'UTF-8'
+    filesMatching('fabric.mod.json') {
+        // 只用字面量替换，不用 Groovy 模板展开（它会把 \n 还原成真换行，产出非法 JSON）
+        filter { String line -> line.replace('${version}', project.version.toString()) }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 25
+    it.options.encoding = 'UTF-8'
+}
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+    from('LICENSE') {
+        rename { "${it}_${project.archives_base_name}" }
+    }
+}
