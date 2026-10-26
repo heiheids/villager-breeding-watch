@@ -39,7 +39,7 @@ Minecraft **26.3** · Fabric · 中英双语
 2. 把 `villager-breeding-watch-fabric-26.3-2.0.0.jar` 放进 `mods/`
 3. 客户端与服务端都要装（单人游戏自动满足）
 
-从 [Releases](../../releases) 下载 jar。
+从 [Releases](https://github.com/heiheids/villager-breeding-watch/releases) 下载 jar。
 
 ## 按键
 
@@ -104,9 +104,11 @@ powershell -ExecutionPolicy Bypass -File tools/diag-log.ps1
 
 ## 文档
 
-- [使用说明.txt](使用说明.txt) —— 安装、界面、多语言、限制、排查
-- [技术说明.txt](技术说明.txt) —— 26.3 关键 API 事实、数据格式、统计口径
-- [村民生育管理器-经验与踩坑.txt](村民生育管理器-经验与踩坑.txt) —— 开发踩坑与事故复盘
+| 文档 | 内容 |
+|---|---|
+| [使用说明](docs/usage.md) | 安装、按键、界面怎么看、多语言、限制、排查 |
+| [技术说明](docs/technical.md) | 程序结构、26.3 关键 API 事实、数据格式、统计口径、时间与节拍的硬规则 |
+| [经验与踩坑](docs/lessons.md) | 开发踩坑与事故复盘，按"能不能自己查出来"排序 |
 
 ## 许可
 
