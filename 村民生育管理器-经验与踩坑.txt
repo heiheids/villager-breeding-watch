@@ -216,6 +216,53 @@
 20. **`robocopy` 复制大缓存不要放前台。** 2.5 GB 会吃掉整个超时窗口；
     放后台任务、完成时收通知，期间继续写代码。
 
+20.1 **公开到 GitHub 前必须先扫"本机痕迹"，而且扫描要包含中文文件名。**
+    本次扫出并修掉 3 处：
+      - `build.ps1` 里写死某工程目录下的 JDK 25 绝对路径
+      - `diag-log.ps1` 里写死实例的 `latest.log` 绝对路径
+      - 文档正文里两处提到本机具体目录
+    修法是改成"自动探测 + 参数可覆盖"（`-Jdk` → `JAVA_HOME` → toolchain → PATH）。
+    〔实测〕扫描时踩了两个小坑：
+      a) `git ls-files` 默认把中文名转义成 `\344\275\277...`，
+         用 `git -c core.quotepath=false ls-files -z` 才能拿到原始路径；
+      b) `Select-String -Path` 对转义路径会报 "Illegal characters in path"，
+         于是**这些文件被静默跳过** —— 差点漏掉文档里的路径泄漏。
+    结论：扫描脚本必须自己 `Get-ChildItem` 遍历，并显式断言"扫了多少个文件"，
+    看到数字对不上就要怀疑。
+
+20.2 **`git push` 被墙时，`gh api` 往往仍然可用。**
+    现象：`Test-NetConnection github.com:443` 成功，但 `git ls-remote` 报
+    `Recv failure: Connection was reset`；而 `gh api rate_limit` 一切正常。
+    区别在于 git 的 HTTPS 走自己的 TLS 栈，不会自动套系统代理；
+    `gh` 会读系统代理 / 自己维护 token 通道。
+    两条出路：
+      a) 给 git 显式配代理：`git config http.proxy http://127.0.0.1:10808`
+         （只配 `--local`，不要污染全局）。本次代理一开、配完立刻通。
+      b) 实在不通时用 Contents API 逐文件提交（`tools/publish-via-api.ps1`）。
+     〔实测〕API 逐文件提交 53 个小文件约 280 KB 完全可行，
+     **但它不会形成正常的 commit 链**：每次 PUT 都是一个独立提交，
+     history 里会出现 53 条同标题提交，而且与本地仓库不是同一条链。
+
+20.3 **用 API 提交会把"工作区字节"原样存进仓库，换行符不会被规范化。**
+    后果：等 git 通道恢复后，`git fetch` 下来会发现十几个文件"有差异"，
+    实际用 `git diff --ignore-cr-at-eol` 比对是**零内容差异**，只是 CRLF vs LF。
+    看真实大小的办法：`git cat-file -s <ref>:<path>`（差 1 字节通常就是行尾）。
+    处理：确认无内容差异后，用本地经过 `.gitattributes` 规范化的版本
+    `git push --force-with-lease`，让远端换行符统一。
+    **务必先比对文件清单**（`git ls-tree -r --name-only`）确认没有丢文件。
+
+20.4 **强制推送后记得搬 tag。**
+    `v2.0.0` 原本指向 API 时代的孤立提交，`--force-with-lease` 只搬分支不搬 tag，
+    结果 tag 指向了一个不在 main 历史里的提交（Release 看起来还在，但源码链接会对不上）。
+    必须显式处理：
+      `git tag -d v2.0.0 && git tag v2.0.0 <新sha> && git push origin v2.0.0 --force`
+    这条容易漏，因为**页面上看不出异常** —— 只有点进 tag 才发现。
+
+20.5 **交付 zip 里不要放 `build/` 与 `.gradle-home/`。**
+    本工程的 `.gradle-home` 有 2.5 GB（预热的 Loom 缓存），
+    `.gitignore` 已排除；发布用的 zip 用 robocopy 的 `/XD` 显式剔除，
+    并断言"打包后的体积在几百 KB 量级"，体积异常就是误打包了。
+
 
 ────────────────────────────────────────────────
 四、仍然成立的老经验（1.21.1 时代踩过，26.3 依然适用）
