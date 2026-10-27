@@ -35,9 +35,17 @@ Minecraft **26.3** · Fabric · 中英双语
 
 ## 安装
 
-1. 需要 **Fabric Loader ≥ 0.19.5** 与 **Fabric API**（26.3 任一版本）
-2. 把 `villager-breeding-watch-fabric-26.3-1.1.0.jar` 放进 `mods/`
+模组有**两个加载器版本**，功能一致、版本号统一为 `1.1.0`，按你用的加载器选一个装：
+
+| 文件 | 加载器 | 依赖 |
+|---|---|---|
+| `villager-breeding-watch-fabric-26.3-1.1.0.jar` | Fabric | Fabric Loader 0.19.5+ / Fabric API（26.3 任一版本） |
+| `villager-breeding-watch-neoforge-26.3-1.1.0.jar` | NeoForge | NeoForge 26.3.0.67+（26.3.0.86 实测） |
+
+1. 按加载器选对应的 jar，放进 `mods/`
+2. 需要 **Java 25**
 3. 客户端与服务端都要装（单人游戏自动满足）
+4. 模组 id 相同，**不能同时装两个版本**
 
 从 [Releases](https://github.com/heiheids/villager-breeding-watch/releases) 下载 jar。
 
@@ -65,24 +73,47 @@ Minecraft **26.3** · Fabric · 中英双语
 
 ## 已知限制（如实说明）
 
-1. **头顶文字受实体同步限制**：26.3 的 Fabric 与 NeoForge 都没有"替换原版名牌"的公共钩子，
-   所以改用原版画头顶文字的 `Gizmos` 通道。它要求客户端手里有这个实体，
-   超出约 5 区块（≈80 格）就画不出文字。远处的村民请看射线 / 详情页 / 统计页。
-2. 因为无法替换原版名牌，头顶会**多出一行**本模组的文字，原版名字仍然显示。
+1. **头顶文字受实体同步限制**：只有客户端已经拥有这个实体时才画得出，
+   超出约 5 区块（≈80 格）就画不出来。远处的村民请看射线 / 详情页 / 统计页。
+2. **头顶名牌的呈现方式两个版本不同**：
+   - **NeoForge**：用 `RenderNameTagEvent` 直接替换原版名牌，头顶只有一行
+     `#12 ♥ 可繁殖 名字`
+   - **Fabric**：Fabric 侧没有等价钩子（已逐个扫描全部 fabric-api jar 确认），
+     只能用 `Gizmos` 额外画一行，于是头顶是「原版名字 + 一行」
+
+   这是引擎能力差异，不是实现取舍。
 3. **失败原因是推断**，不是原版事件。极端情况下可能标错，界面里带原因码可对照。
 4. 床位统计只覆盖已加载的区块。
 5. 「常开」模式上限 600 名村民，扫描间隔不小于 1 秒，寻路探测有预算。
 
 ## 从源码构建
 
-```bash
-# 需要 JDK 25
-powershell -ExecutionPolicy Bypass -File tools/build.ps1
-# 产物在 build/libs/
+这个仓库有**两个加载器分支**：
+
 ```
+src/                  Fabric 版（Loom 的 main + client 双源码集）
+neoforge/             NeoForge 版（单一 main，客户端类在 client/ 包下）
+docs/                 三份文档
+```
+
+```bash
+# Fabric 版，需要 JDK 25
+powershell -ExecutionPolicy Bypass -File tools/build.ps1
+
+# NeoForge 版
+cd neoforge
+powershell -ExecutionPolicy Bypass -File tools/build.ps1
+```
+
+产物分别在 `build/libs/` 与 `neoforge/build/libs/`。
 
 脚本会自动定位 JDK 25（`-Jdk` 参数 → `JAVA_HOME` → Gradle toolchain 缓存 → PATH），
 并把 `GRADLE_USER_HOME` 指到工程内的 `.gradle-home`，不在工程外产生缓存。
+
+**两个分支共用的代码有 17 个文件**，`WatchServer` / `ClientHub` / `Eval` /
+`StatsStore` / `Lang` / `Json` / 三个界面都在其中——
+加载器差异被收进 `PacketSender` / `ClientSender` / `ConfigDirs` 三个接口。
+改共享逻辑时必须两边同步，清单见 [经验与踩坑](docs/lessons.md) 第 27 条。
 
 ## 自检工具
 
