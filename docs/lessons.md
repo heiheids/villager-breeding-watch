@@ -286,13 +286,39 @@ MC 那一层（`Eval` / `Views` / `StatsStore` / `Cond` / `Lang` / `Json` / 三�
     | 网络注册 | `PayloadTypeRegistry.clientboundPlay()` | `RegisterPayloadHandlersEvent.registrar("1")` |
     | 名牌 | **无** | `RenderNameTagEvent.CanRender` |
 
-26. **事件注册错总线不会报错，只是永远不触发。**
-    NeoForge 两条总线：mod bus（注册期：`RegisterPayloadHandlersEvent`、
-    `RegisterKeyMappingsEvent`、`RegisterGuiLayersEvent` 实现了 `IModBusEvent`）
-    与 game bus（运行期：tick / 登录 / 死亡 / 渲染）。
-    挂错地方**编译通过、启动正常、毫无反应** —— 与 Fabric 侧
-    「入口点没写进 fabric.mod.json」是同一类静默失效。
-    〔实测〕判据：如果整个功能一点动静都没有（连一行日志都不打），先查总线。
+26. **事件挂错总线是"构造期直接崩"，不是静默失效（这里我先写错了，被真机打脸）。**
+    NeoForge 两条总线：mod bus（注册期）与 game bus（运行期）。
+    `RegisterGuiLayersEvent` / `RegisterKeyMappingsEvent` /
+    `RegisterPayloadHandlersEvent` / `EntityRenderersEvent` 等都实现了
+    **`IModBusEvent`**，只能挂 mod bus。
+
+    **我最初的判断是错的**：以为挂错只是"永远不触发"（那是我按 Fabric 的直觉推的）。
+    真机日志打脸——
+    ```
+    [modloading-worker-0/ERROR]: Failed to create mod instance.
+        ModID: villagerbreedingwatch, class ...VbwMod
+    java.lang.IllegalArgumentException: Listener for event class
+        net.neoforged.neoforge.client.event.RegisterGuiLayersEvent
+        takes an argument that is not valid for this bus
+    Caused by: java.lang.IllegalArgumentException:
+        IModBusEvent events are not allowed on the common NeoForge bus!
+        Use a mod bus instead.
+        at ...VbwClient.register(VbwClient.java:62)
+    [main/FATAL]: Failed to wait for future Mod Construction, 1 errors found
+    ```
+    行为特征：**整个游戏启动失败**（不是某个功能不生效），
+    而且报错点在 `modloading-worker` 线程里，只在 FATAL 汇总行才看出来是致命错误。
+
+    修法：`gameBus.addListener(HUD::onRegisterLayers)` → `modBus.addListener(...)`。
+
+    〔实测〕这类问题**光靠看代码很容易再犯**（我就是在写完这条教训之后犯的），
+    所以必须用脚本卡住：`tools/check-bus.ps1` 会解析
+    `addListener(Class::method)` 的方法引用、回查方法首参的事件类型，
+    命中 IModBusEvent 清单时断言调用方必须是 `modBus`。
+    脚本带反证：故意改回 `gameBus` 时它必须报 FAIL（已验证）。
+
+    **判据速查**：拿不准某事件属于哪条总线时，`javap` 看它是否
+    `implements net.neoforged.fml.event.IModBusEvent`，不要凭印象。
 
 27. **为了让两侧共用同一份服务端逻辑，抽了三个接口。**
     这是本次移植在架构上的主要收获：

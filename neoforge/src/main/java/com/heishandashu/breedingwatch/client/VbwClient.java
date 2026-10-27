@@ -54,12 +54,13 @@ public final class VbwClient {
             }
         };
 
-        // 注册期事件：mod bus
+        // 注册期事件：mod bus（IModBusEvent 挂在 game bus 上会直接抛
+        // "IModBusEvent events are not allowed on the common NeoForge bus"）
         modBus.addListener(VbwClient::onRegisterKeys);
+        modBus.addListener(HUD::onRegisterLayers);
 
         // 运行期事件：game bus
         gameBus.addListener(VbwClient::onClientTick);
-        gameBus.addListener(HUD::onRegisterLayers);
         gameBus.addListener(NameTags::onCanRenderNameTag);
         gameBus.addListener(BedLines::onRenderLevelStage);
         MerchantHook.register(gameBus);
