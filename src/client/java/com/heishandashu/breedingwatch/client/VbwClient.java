@@ -49,6 +49,11 @@ public final class VbwClient implements ClientModInitializer {
 
         VbwNetworking.ON_SYNC = ClientHub.DATA::accept;
         VbwNetworking.ON_UI = ClientHub::onUi;
+        VbwNetworking.CLIENT_SENDER = payload -> {
+            if (ClientPlayNetworking.canSend(payload.type())) {
+                ClientPlayNetworking.send(payload);
+            }
+        };
         ClientPlayNetworking.registerGlobalReceiver(Payloads.Sync.TYPE,
                 (payload, ctx) -> ctx.client().execute(() -> VbwNetworking.handleSync(payload.json())));
         ClientPlayNetworking.registerGlobalReceiver(Payloads.Ui.TYPE,

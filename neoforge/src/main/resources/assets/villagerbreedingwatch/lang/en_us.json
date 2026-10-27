@@ -1,0 +1,8 @@
+{
+  "_note": "Minecraft standard language file: only the keys the vanilla UI reads (key binds, category). In-mod screens use vbw_lang/ instead; the two sets are independent. Keys must be prefixed with the mod id to avoid polluting the global translation namespace.",
+
+  "key.category.villagerbreedingwatch.main": "Villager Breeding Watch",
+  "key.villagerbreedingwatch.settings": "Open settings",
+  "key.villagerbreedingwatch.stats": "Open statistics",
+  "key.villagerbreedingwatch.toggle": "Master switch"
+}

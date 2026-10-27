@@ -1,0 +1,39 @@
+# ---- Build output ----
+build/
+out/
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# ---- Gradle ----
+.gradle/
+.gradle-home/
+!gradle/wrapper/
+
+# ---- Dev runtime (loom runClient / runServer) ----
+run/
+runs/
+
+# ---- IDE ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+
+# ---- OS ----
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ---- Logs and temp ----
+*.log
+logs/
+*.tmp
+
+# ---- Local toolchains (huge, never commit) ----
+tools/jdk*/
+jdk*/

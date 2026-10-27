@@ -8,7 +8,6 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -69,8 +68,6 @@ public final class ServerHooks {
     }
 
     private static void sendUi(ServerPlayer sp, String json) {
-        if (ServerPlayNetworking.canSend(sp, Payloads.Ui.TYPE)) {
-            ServerPlayNetworking.send(sp, new Payloads.Ui(json));
-        }
+        com.heishandashu.breedingwatch.net.VbwNetworking.SENDER.send(sp, new Payloads.Ui(json));
     }
 }

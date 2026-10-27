@@ -7,7 +7,7 @@ import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
 /**
- * 网络接线。
+ * 网络接线（Fabric 侧）。
  *
  * <p>公共侧只注册"信道本身的类型"与服务端接收器；客户端的接收器在
  * {@code VbwClient} 里注册（专用服务端不会加载任何客户端类）。</p>
@@ -19,6 +19,28 @@ public final class VbwNetworking {
 
     public static volatile Consumer<String> ON_SYNC;
     public static volatile Consumer<String> ON_UI;
+
+    /**
+     * 客户端发送端。
+     *
+     * <p>由客户端入口注入（Fabric 用 {@code ClientPlayNetworking}，
+     * NeoForge 用 {@code PacketDistributor.sendToServer}）。
+     * 保持为 null 时 {@code ClientHub} 会跳过发送，不会抛异常。</p>
+     */
+    public static volatile ClientSender CLIENT_SENDER;
+
+    /**
+     * 发送端实现。
+     *
+     * <p>加载器差异（{@code canSend} + 静态 {@code send} vs
+     * {@code PacketDistributor.sendToPlayer}）收在这一处，
+     * {@code WatchServer} 只依赖 {@link PacketSender} 接口。</p>
+     */
+    public static final PacketSender SENDER = (player, payload) -> {
+        if (ServerPlayNetworking.canSend(player, payload.type())) {
+            ServerPlayNetworking.send(player, payload);
+        }
+    };
 
     private VbwNetworking() {}
 

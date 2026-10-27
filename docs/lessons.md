@@ -192,6 +192,123 @@
     不是全局的那个常量字段 —— 写成 `ScreenEvents.AFTER_EXTRACT.register(...)` 直接编译不过。
 
 
+## 二之二、同一份代码移植到 NeoForge 26.3 时的真实差异
+
+背景：Fabric 支做完后，用户要求再出 NeoForge 26.3 版（目标实例 `26.3-NeoForge086`，
+实跑 NeoForge **26.3.0.86**，而离线缓存里只有 **26.3.0.67-beta** 的编译件，
+所以按 0.67-beta 编译、`mods.toml` 声明下界 `[26.3.0.67-beta,)`）。
+
+**结论先行：28 个文件里 17 个完全共用、11 个要改写**。
+MC 那一层（`Eval` / `Views` / `StatsStore` / `Cond` / `Lang` / `Json` / 三个界面）一行没改。
+差异只在「加载器层」。下面是逐条核对过的（全部 `javap` 读 jar，非记忆）。
+
+17. **`RenderLevelStageEvent` 在 26.3 已经彻底重构，没有 `Stage` 枚举。**
+    写 `event.getStage() != RenderLevelStageEvent.Stage.AfterTranslucentFeatures`
+    直接编译失败——`getStage()` 和 `Stage` 都不存在。
+    26.3 改成**一个阶段一个子类**，监听哪个阶段就监听哪个子类：
+    `AfterLevel` / `AfterOpaqueBlocks` / `AfterOpaqueFeatures` / `AfterSky` /
+    `AfterTranslucentBlocks` / `AfterTranslucentFeatures` / `AfterWeather` …
+    所以处理器签名要写成
+    `void onStage(RenderLevelStageEvent.AfterTranslucentFeatures event)`。
+    〔读码〕这是本次移植里第一个卡住的点。
+
+18. **`FMLEnvironment.dist` 已改成 `getDist()`。**
+    `FMLEnvironment.dist.isClient()` → `FMLEnvironment.getDist().isClient()`。
+    字段没了，只剩 `getDist()` 与 `isProduction()`。〔读码〕
+
+19. **`PayloadRegistrar` 要 `RegistryFriendlyByteBuf`，而 `ByteBufCodecs.STRING_UTF8` 是 `ByteBuf`。**
+    这是两侧 codec 写法**不能直接搬**的根因：
+    - Fabric：`PayloadTypeRegistry` 收 `StreamCodec<ByteBuf, T>`
+    - NeoForge：`PayloadRegistrar` 收 `StreamCodec<? super RegistryFriendlyByteBuf, T>`
+    直接把 Fabric 版本搬过来 → 「不存在类型变量 O 的实例，以使
+    `StreamCodec<ByteBuf,O>` 与 `StreamCodec<RegistryFriendlyByteBuf,T>` 一致」。
+    修法用官方提供的提升方法 **`mapStream`**，并**显式写类型见证**：
+    ```java
+    public static final StreamCodec<RegistryFriendlyByteBuf, Sync> CODEC =
+            ByteBufCodecs.STRING_UTF8.<RegistryFriendlyByteBuf>mapStream(b -> b)
+                    .map(Sync::new, Sync::json);
+    ```
+    注意：不写 `.<RegistryFriendlyByteBuf>` 类型见证时，`mapStream` 的类型推断
+    仍然失败，报同一个错——这个细节容易再绕一圈。〔实测：这里编译失败过两次〕
+
+20. **客户端发包不是 `PacketDistributor`。**
+    `PacketDistributor` 只有 `sendToPlayer` / `sendToAllPlayers` /
+    `sendToPlayersInDimension` 等**服务端**方法，没有 `sendToServer`。
+    客户端要用 **`net.neoforged.neoforge.client.network.ClientPacketDistributor
+    .sendToServer(payload)`**。〔读码〕
+
+21. **HUD：`GuiLayer` + `RegisterGuiLayersEvent`（mod bus）。**
+    ```java
+    event.registerAbove(VanillaGuiLayers.HOTBAR, id, (g, delta) -> { ... });
+    ```
+    回调形态与 Fabric 的 `HudElement` 完全一致（`GuiGraphicsExtractor` + `DeltaTracker`），
+    所以 HUD 的绘制代码可以整段共用，只有注册方式不同。
+
+22. **按键分类要显式注册。**
+    NeoForge 的 `RegisterKeyMappingsEvent` 除了 `register(KeyMapping)`，
+    还要 `registerCategory(KeyMapping.Category)`。
+    两边都用 `KeyMapping.Category.register(Identifier)`（Fabric）
+    或 `new KeyMapping.Category(Identifier)`（NeoForge 侧直接构造也能编过）——
+    翻译键都是 `key.category.<namespace>.<path>`，**共用同一份标准语言文件**。〔实测〕
+
+23. **NeoForge 有 `RenderNameTagEvent`，这是它比 Fabric 强的一处。**
+    `RenderNameTagEvent.CanRender` 带 `getEntity()` / `getOriginalContent()` /
+    `setContent()` / `setCanRender(TriState)`，可以**直接替换原版名牌内容**：
+    ```
+    event.setContent(Component.literal("#12 ♥ 可繁殖 " + 原版名字));
+    ```
+    于是头顶只有一行，不会像 Fabric 支那样「原版名字 + 额外一行」。
+    Fabric 侧已逐个扫描全部 fabric-api jar，确认**没有任何 NameTag 相关事件**，
+    只能用 `Gizmos.billboardTextOverMob` 额外画一行。
+    **这是两个加载器在同一功能上的能力差异，要在文档里如实说明。**
+    〔读码 + 实测〕
+
+24. **`ScreenEvent.Init.Post` 可以直接加控件。**
+    `event.addListener(widget)` —— 不像 Fabric 要绕
+    `ScreenEvents.AFTER_INIT` + `Screens.getWidgets(screen).add(widget)`。
+
+25. **两侧的事件入口对照表（本次实际用到的）**
+
+    | 用途 | Fabric | NeoForge 26.3 |
+    |---|---|---|
+    | 公共入口 | `ModInitializer#onInitialize` | `@Mod` 构造函数注入 `IEventBus` |
+    | 客户端入口 | `ClientModInitializer` | 显式注册（本工程由公共入口按 side 分发） |
+    | 每 tick | `ServerTickEvents.END_SERVER_TICK` | `ServerTickEvent.Post`（game bus） |
+    | 客户端 tick | `ClientTickEvents.END_CLIENT_TICK` | `ClientTickEvent.Post`（game bus） |
+    | 玩家登录 | `ServerPlayConnectionEvents.JOIN` | `PlayerEvent.PlayerLoggedInEvent` |
+    | 实体加入世界 | `ServerEntityEvents.ENTITY_LOAD` | `EntityJoinLevelEvent`（有 `loadedFromDisk()`） |
+    | 生物死亡 | `ServerLivingEntityEvents.AFTER_DEATH` | `LivingDeathEvent` |
+    | 右键实体 | `UseEntityCallback`（返回 `InteractionResult`） | `PlayerInteractEvent.EntityInteract`（不取消即可） |
+    | 停服 | `ServerLifecycleEvents.SERVER_STOPPING` | `ServerStoppingEvent` |
+    | 世界渲染阶段 | `LevelRenderEvents.BEFORE_GIZMOS` | `RenderLevelStageEvent.<阶段子类>` |
+    | HUD | `HudElementRegistry.addLast` | `RegisterGuiLayersEvent.registerAbove` |
+    | 按键注册 | `KeyMappingHelper.registerKeyMapping` | `RegisterKeyMappingsEvent.register` |
+    | 网络注册 | `PayloadTypeRegistry.clientboundPlay()` | `RegisterPayloadHandlersEvent.registrar("1")` |
+    | 名牌 | **无** | `RenderNameTagEvent.CanRender` |
+
+26. **事件注册错总线不会报错，只是永远不触发。**
+    NeoForge 两条总线：mod bus（注册期：`RegisterPayloadHandlersEvent`、
+    `RegisterKeyMappingsEvent`、`RegisterGuiLayersEvent` 实现了 `IModBusEvent`）
+    与 game bus（运行期：tick / 登录 / 死亡 / 渲染）。
+    挂错地方**编译通过、启动正常、毫无反应** —— 与 Fabric 侧
+    「入口点没写进 fabric.mod.json」是同一类静默失效。
+    〔实测〕判据：如果整个功能一点动静都没有（连一行日志都不打），先查总线。
+
+27. **为了让两侧共用同一份服务端逻辑，抽了三个接口。**
+    这是本次移植在架构上的主要收获：
+    - `PacketSender`：服务端怎么发一个包（Fabric `canSend`+`send` / NeoForge `PacketDistributor`）
+    - `ClientSender`：客户端怎么发一个包（Fabric `ClientPlayNetworking` / NeoForge `ClientPacketDistributor`）
+    - `ConfigDirs`：配置目录从哪来（Fabric `FabricLoader` / NeoForge `FMLPaths`）
+    抽完之后 `WatchServer`（399 行）与 `ClientHub` 都能两个加载器共用，
+    不必为了「一行发送」维护两份扫描器。**这条经验可直接复用到任何双加载器项目。**
+
+28. **入口点位置不同，且都容易静默失效。**
+    Fabric：入口点必须写进 `fabric.mod.json`（26.x 不合并 `*-client.entrypoints.json`）。
+    NeoForge：入口靠 `@Mod` 注解 + `neoforge.mods.toml` 里的 `modId` 对齐，
+    写错注释或 toml 里没有对应 `[[mods]]` 都会导致「模组加载了但什么也不做」。
+    两侧都要在自检脚本里断言入口类真的在 jar 里。
+
+
 ## 三、迁移中"看起来能用、其实没生效"的陷阱
 
 17. **客户端入口点必须写进 `fabric.mod.json`。**
@@ -247,10 +364,10 @@
     **务必先比对文件清单**（`git ls-tree -r --name-only`）确认没有丢文件。
 
 20.4 **强制推送后记得搬 tag。**
-    `v2.0.0` 原本指向 API 时代的孤立提交，`--force-with-lease` 只搬分支不搬 tag，
+    `v1.1.0` 原本指向 API 时代的孤立提交，`--force-with-lease` 只搬分支不搬 tag，
     结果 tag 指向了一个不在 main 历史里的提交（Release 看起来还在，但源码链接会对不上）。
     必须显式处理：
-      `git tag -d v2.0.0 && git tag v2.0.0 <新sha> && git push origin v2.0.0 --force`
+      `git tag -d v1.1.0 && git tag v1.1.0 <新sha> && git push origin v1.1.0 --force`
     这条容易漏，因为**页面上看不出异常** —— 只有点进 tag 才发现。
 
 20.5 **交付 zip 里不要放 `build/` 与 `.gradle-home/`。**

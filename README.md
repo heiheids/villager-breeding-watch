@@ -36,7 +36,7 @@ Minecraft **26.3** · Fabric · 中英双语
 ## 安装
 
 1. 需要 **Fabric Loader ≥ 0.19.5** 与 **Fabric API**（26.3 任一版本）
-2. 把 `villager-breeding-watch-fabric-26.3-2.0.0.jar` 放进 `mods/`
+2. 把 `villager-breeding-watch-fabric-26.3-1.1.0.jar` 放进 `mods/`
 3. 客户端与服务端都要装（单人游戏自动满足）
 
 从 [Releases](https://github.com/heiheids/villager-breeding-watch/releases) 下载 jar。

@@ -4,9 +4,10 @@ import com.heishandashu.breedingwatch.VbwMod;
 import com.heishandashu.breedingwatch.client.ui.DetailScreen;
 import com.heishandashu.breedingwatch.i18n.Lang;
 import com.heishandashu.breedingwatch.json.Json;
+import com.heishandashu.breedingwatch.net.ClientSender;
 import com.heishandashu.breedingwatch.net.Payloads;
+import com.heishandashu.breedingwatch.net.VbwNetworking;
 import com.heishandashu.breedingwatch.view.Views;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 
@@ -54,10 +55,17 @@ public final class ClientHub {
 
     // ------------------------------------------------------------------ 网络
 
+    /**
+     * 发送一个 C2S 指令。
+     *
+     * <p>只依赖 {@link ClientSender} 接口：Fabric 与 NeoForge 的发送写法差异
+     * 收在各自入口注入的实现里。</p>
+     */
     public static void sendCmd(String json) {
         try {
-            if (ClientPlayNetworking.canSend(Payloads.Cmd.TYPE)) {
-                ClientPlayNetworking.send(new Payloads.Cmd(json));
+            ClientSender sender = VbwNetworking.CLIENT_SENDER;
+            if (sender != null) {
+                sender.sendToServer(new Payloads.Cmd(json));
             }
         } catch (Exception e) {
             VbwMod.LOG.warn("[VBW] 发送指令失败：{}", e.toString());

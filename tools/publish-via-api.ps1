@@ -1,4 +1,4 @@
-﻿# 通过 GitHub REST Contents API 上传仓库内容。
+# 通过 GitHub REST Contents API 上传仓库内容。
 #
 # 为什么不用 git push：本机到 github.com:443 的 git 传输被阻断（Connection reset /
 # timeout），但 gh 的 API 通道是通的（rate limit 正常）。所以改用 Contents API
@@ -10,7 +10,7 @@
 param(
     [string]$Repo = 'heiheids/villager-breeding-watch',
     [string]$Branch = 'main',
-    [string]$Message = '村民繁殖观测 v2.0.0 — Minecraft 26.3 Fabric',
+    [string]$Message = '村民繁殖观测 v1.1.0 — Minecraft 26.3 Fabric',
     [switch]$DryRun
 )
 

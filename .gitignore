@@ -1,4 +1,4 @@
-# ---- 构建产物 ----
+# ---- Build output ----
 build/
 out/
 *.jar
@@ -9,7 +9,7 @@ out/
 .gradle-home/
 !gradle/wrapper/
 
-# ---- 开发运行时（loom runClient / runServer 生成）----
+# ---- Dev runtime (loom runClient / runServer) ----
 run/
 runs/
 
@@ -24,16 +24,16 @@ runs/
 .project
 bin/
 
-# ---- 操作系统 ----
+# ---- OS ----
 Thumbs.db
 desktop.ini
 .DS_Store
 
-# ---- 日志与临时文件 ----
+# ---- Logs and temp ----
 *.log
 logs/
 *.tmp
 
-# ---- 本地工具链（体积巨大，不进仓库）----
+# ---- Local toolchains (huge, never commit) ----
 tools/jdk*/
 jdk*/

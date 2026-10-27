@@ -1,0 +1,8 @@
+{
+  "_note": "Minecraft 标准语言文件：只放会被原版界面读取的翻译键（按键绑定、分类）。游戏内自绘界面的文案在 vbw_lang/ 里，两套文件互不相干。键名必须带模组前缀，避免污染全局翻译键空间。",
+
+  "key.category.villagerbreedingwatch.main": "村民繁殖观测",
+  "key.villagerbreedingwatch.settings": "打开设置",
+  "key.villagerbreedingwatch.stats": "打开统计",
+  "key.villagerbreedingwatch.toggle": "总开关"
+}

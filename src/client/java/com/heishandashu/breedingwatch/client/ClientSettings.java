@@ -6,7 +6,6 @@ import com.heishandashu.breedingwatch.json.Json;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 
 /**
@@ -39,7 +38,7 @@ public final class ClientSettings {
     public int interval = 10;
 
     private static Path file() {
-        return FabricLoader.getInstance().getConfigDir().resolve(VbwMod.MOD_ID).resolve("client.json");
+        return com.heishandashu.breedingwatch.net.ConfigDirs.config().resolve(VbwMod.MOD_ID).resolve("client.json");
     }
 
     public void load() {

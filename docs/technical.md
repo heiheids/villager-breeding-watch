@@ -1,17 +1,42 @@
 # 村民繁殖观测（Villager Breeding Watch）· 技术说明
-适用环境：Minecraft 26.3 · Fabric Loader 0.19.5 · Fabric API 0.162.0+26.3
-          Loom 1.18.4 · Gradle 9.7.1 · JDK 25
+适用环境：Minecraft 26.3 · JDK 25 · Gradle 9.7.1
+  Fabric 支：Fabric Loader 0.19.5 · Fabric API 0.162.0+26.3 · Loom 1.18.4
+  NeoForge 支：NeoForge 26.3.0.67-beta（编译）/ 26.3.0.86（实测运行）· ModDevGradle 2.0.148
+统一版本号：1.1.0
 
 ## 一、设计原则
 1. 模块化，禁止单页面海量代码。一个包一类职责，任何单个文件不承载两件事：
    i18n / json / view / net / server / client / client.ui 七个包，各管一段。
-2. 客户端与服务端分离（Loom 的 `splitEnvironmentSourceSets()`）：
+2. 客户端与服务端分离（Fabric 用 Loom 的 `splitEnvironmentSourceSets()`）：
    `src/main` 只放公共与服务端逻辑，`src/client` 只放界面 / 渲染 / 按键。
    公共源码集不 import 任何 `net.minecraft.client.*` 或 `net.fabricmc...api.client.*`
-   —— 这条由 `tools/check-jar.ps1` 自动校验，防的是"专用服务端加载客户端类直接崩"。
-3. 尽量少第三方依赖：**除 Minecraft / Fabric Loader / Fabric API 外零额外依赖**。
+   —— 这条由自检脚本自动校验，防的是"专用服务端加载客户端类直接崩"。
+3. 尽量少第三方依赖：**除 Minecraft / 加载器 / 加载器官方 API 外零额外依赖**。
    JSON 用游戏自带的 Gson（26.3 的 `com.google.code.gson:gson:2.14.0` 已在运行时列表里）。
 4. 多语言是一等公民：代码里不写面向用户的整句，全部走 `Lang.t(key)` / `Lang.f(key, args)`。
+5. **加载器差异全部收敛到接口**（本次移植的关键决策）：
+   `PacketSender`（服务端发包）、`ClientSender`（客户端发包）、`ConfigDirs`（配置目录）。
+   抽完之后 `WatchServer`（399 行）、`ClientHub`、`Eval`、`StatsStore`、三个界面
+   都能被 Fabric 与 NeoForge 两个加载器**共用同一份代码**。
+
+
+## 一之二、双加载器分支对照
+
+| | Fabric 版 | NeoForge 版 |
+|---|---|---|
+| 工程目录 | `源码\` | `源码-NeoForge26.3\` |
+| 产物 | `...-fabric-26.3-1.1.0.jar` | `...-neoforge-26.3-1.1.0.jar` |
+| 构建插件 | `net.fabricmc.fabric-loom` 1.18.4 | `net.neoforged.moddev` 2.0.148 |
+| 编译目标 | Fabric API 0.162.0+26.3 | NeoForge 26.3.0.67-beta（运行 0.86 实测） |
+| 源码集 | main + client 分离 | 单一 main（客户端类在 `client/` 包，靠 side 判断不加载） |
+| 入口 | `fabric.mod.json` entrypoints | `@Mod` + `META-INF/neoforge.mods.toml` |
+| 事件总线 | 单一（Fabric API 的 Callback） | mod bus + game bus 两条 |
+| 网络 codec 缓冲区 | `StreamCodec<ByteBuf, T>` | `StreamCodec<RegistryFriendlyByteBuf, T>` |
+| 头顶名牌 | `Gizmos` 额外一行 | `RenderNameTagEvent` 替换原版内容 |
+| 共用文件数 | 17 / 28 | 17 / 28 |
+
+**修改共享逻辑时的纪律**：改完 Fabric 支必须把对应文件同步到 NeoForge 支（反之亦然），
+否则两个版本会静默分叉。共享清单见 `docs/lessons.md` 第 27 条。
 
 
 ## 二、目录结构

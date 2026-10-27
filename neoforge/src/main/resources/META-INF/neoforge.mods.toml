@@ -1,0 +1,29 @@
+modLoader = "javafml"
+loaderVersion = "[12,)"
+license = "MIT"
+
+[[mods]]
+modId = "villagerbreedingwatch"
+version = "${version}"
+displayName = "村民繁殖观测 / Villager Breeding Watch"
+authors = "黑山大叔"
+description = '''
+观测村民为什么生、为什么不生：头顶稳定编号与状态、村民到床的彩色射线、
+单个村民详情、全图出生/失败统计，中英文界面可跟随游戏语言或手动切换。
+
+作者主页：https://space.bilibili.com/19428259
+'''
+
+[[dependencies.villagerbreedingwatch]]
+modId = "neoforge"
+type = "required"
+versionRange = "[26.3.0.67-beta,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.villagerbreedingwatch]]
+modId = "minecraft"
+type = "required"
+versionRange = "[26.3]"
+ordering = "NONE"
+side = "BOTH"

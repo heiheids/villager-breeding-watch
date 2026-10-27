@@ -1,0 +1,326 @@
+{
+  "_note": "村民繁殖观测 中文文案。以下划线开头的键是注释，不会被加载。{0} {1} 是占位符。",
+  "fmt": {
+    "clock": "第{0}天 {1}",
+    "sec": "{0}秒",
+    "minsec": "{0}分{1}秒"
+  },
+  "ui": {
+    "settings_title": "村民繁殖观测 · 设置",
+    "stats_title": "村民繁殖观测 · 统计",
+    "detail_title": "村民繁殖观测 · 详情",
+    "t": {
+      "main": "总开关（整套观测）",
+      "tag": "头顶名牌（编号+状态）",
+      "line": "床绑定射线",
+      "thru": "穿透显示（隔墙可见）",
+      "hud": "左上角 HUD 面板",
+      "allline": "常开所有射线（不限半径）",
+      "alltag": "常开所有头顶信息"
+    },
+    "radius": "扫描半径",
+    "interval": "刷新间隔（刻）",
+    "reload_lang": "重载语言文件",
+    "lang_btn": "语言模式：{0}",
+    "lang_auto": "跟随游戏语言",
+    "lang_line": "当前生效语言：{0}　已安装：{1}",
+    "legend_hint": "绿=正常　橙=有丢弃风险　灰=超过16格　红=床已丢失　青虚线=无床时的最近空床",
+    "open_stats": "打开统计",
+    "done": "完成",
+    "scroll": "第 {0}/{1} 行，共 {2} 行（滚轮翻页）",
+    "back_settings": "返回设置",
+    "tab_overview": "总览",
+    "tab_failures": "失败明细",
+    "tab_villagers": "村民明细",
+    "merchant_btn": "繁殖详情",
+    "btn_refresh": "刷新",
+    "btn_stats": "统计",
+    "btn_close": "关闭"
+  },
+  "state": {
+    "on": "开",
+    "off": "关"
+  },
+  "hud": {
+    "off1": "观测已关闭（按 N 开启，V 设置，B 统计）",
+    "legend": "绿=正常床线　橙=有风险　灰=超16格　红=床丢失",
+    "keys": "V=设置　B=统计　N=总开关",
+    "state": "状态={0}　{1}{2}　半径={3}　间隔={4}刻",
+    "force_lines": "常开射线",
+    "force_tags": "常开名牌",
+    "waiting": "等待服务器数据…",
+    "count": "观测 {0} 名（可繁殖 {1} 名）",
+    "allmode": "（常开：不限半径，上限600）",
+    "server_scan": "服务器扫到 {0} 名",
+    "stale": "（数据已停止更新）",
+    "totals": "出生 {0} / 失败 {1} / 死亡 {2}",
+    "worst": "最常失败：{0}",
+    "no_fail": "暂无失败记录"
+  },
+  "st": {
+    "no_stats": "还没有统计数据（先按 N 打开观测）",
+    "time": "世界时间：{0}",
+    "births": "总出生：{0}　本次扫描：{1} 名村民",
+    "failures": "总失败：{0}",
+    "deaths": "总死亡：{0}",
+    "tracked": "记录过的村民：{0}",
+    "fail_by_code": "按原因统计：",
+    "none": "（无）",
+    "times": " ×{0}",
+    "recent_births": "最近出生：",
+    "birth_line": "#{0} {1}　{2}　tick={3}",
+    "unconfirmed": "（父母未确认）",
+    "parent": "父母：{0}",
+    "place": "位置：{1} {2} {3}（{0}）",
+    "fail_head": "失败记录（最近 {0} 条）：",
+    "fail_line": "{0}　#{1} {2}　{3}",
+    "fail_code": "原因码：{0}",
+    "vill_head": "村民明细（按出生数排序）：",
+    "vill_line": "#{0} {1}（{2}）　出生 {3} / 失败 {4}　{5}",
+    "present": "在场",
+    "absent": "已不在场",
+    "tab_now": "当前标签：{0}"
+  },
+  "legend": {
+    "title": "射线图例：",
+    "green": "绿色实线：床正常绑定（存在、可达、16格内、是自己的）",
+    "orange": "橙色实线：这张床夜间有被丢弃的风险，或不是该村民所有",
+    "red": "红色：HOME 床已经不存在（被拆/被抢/未加载）",
+    "gray": "灰色：床距离超过 16 格（原版校验范围外，繁殖时不认）",
+    "dash": "虚线：夜间寻路时会丢弃这张床（距离/寻路/床位票问题）",
+    "cyan": "青色虚线：没有 HOME 的村民，指向最近的空闲床",
+    "sym": "✔ 满足　✘ 不满足　○ 软性提示（不拦繁殖）",
+    "right": "行尾 [CODE] 是原因码，换语言不会把历史记录搞乱"
+  },
+  "d": {
+    "fetching": "正在向服务器请求这个村民的数据…",
+    "title": "#{0} {1}（{2}）",
+    "ready": "状态：{0}",
+    "not_ready": "状态：{0}（还不能繁殖）",
+    "ids": "编号 #{0}　实体 {1}　UUID {2}",
+    "age": "年龄值 {0}（{1}）",
+    "age_baby": "婴儿，还需 {0} 才成年",
+    "age_cool": "冷却中，还剩 {0}",
+    "age_ok": "成年且无冷却",
+    "prof": "职业 {0}　等级 {1}　交易条目 {2}",
+    "empty": "（空）",
+    "none": "无"
+  },
+  "f": {
+    "head": "食物点 {1}/{0} {2}",
+    "sub": "其中：食物值 {0}　背包 {1}",
+    "rule": "原版判定：foodLevel + 背包营养点 ≥ 12，且不在睡觉、age == 0",
+    "inv": "背包：{0}",
+    "points": "各物品贡献：{0}"
+  },
+  "b": {
+    "head": "48格内床：共 {0} 张，空 {1} 张，实测可达 {2} 张",
+    "home": "绑定床：{0}",
+    "home_at": "{0}（{1}，距离 {2} 格）",
+    "no_home": "未绑定床（HOME 记忆为空）",
+    "poi": "POI 存在 {0}　剩余票 {1}　已占用 {2}　可达 {3}（{4}）",
+    "not_checked": "未检测",
+    "reach_yes": "可达",
+    "reach_no": "不可达",
+    "reach_skip": "本次未检测（预算耗尽）",
+    "drop": "丢弃风险：{0}　{1}",
+    "drop_yes": "有",
+    "drop_stable": "无",
+    "no_risk": "（无风险原因）",
+    "conflict": "同床冲突：# {0}",
+    "nearest": "最近空闲床：{0}"
+  },
+  "a": {
+    "head": "当前活动：{0}　全部活动：{1}",
+    "sched": "日程活动 {0}　实际生效 {1}",
+    "sched_note": "WORK 需要工作站点、MEET 需要钟，缺记忆时 Brain 会回落到 IDLE",
+    "next": "距下次日程切换 {0}；距下一个空闲期 {1}",
+    "in_idle": "已处于空闲期",
+    "time": "世界时间 {0}（dayTime={1}）",
+    "flags": "睡觉 {0}　移动中 {1}　受惊 {2}{3}",
+    "panic": "（{0}）",
+    "poi": "袭击 {0}　工作站点 {1}　钟 {2}{3}",
+    "current_marker": "← 当前"
+  },
+  "p": {
+    "head": "{0}",
+    "target": "配对对象 #{0} {1}（{2} 格）",
+    "no_target": "当前没有配对对象",
+    "obj": "对象可繁殖 {0}{1}",
+    "obj_missing": "　缺：{0}",
+    "rule": "原版要求：双方距离 ≤ 8 格、都没有 WALK_TARGET，先吃食物再占床",
+    "courting": "正在求爱 {0} {1}",
+    "courting_at": "开始 tick={0}，预期出生 tick={1}",
+    "last": "上次配对：{0}　结果：{1} {2}",
+    "last_tick": "（tick={0}）"
+  },
+  "c": {
+    "head": "条件清单（✔ 硬性满足　✘ 硬性不满足　○ 软性提示）："
+  },
+  "cd": {
+    "adult_ok": "已成年",
+    "adult_baby": "还是婴儿，还需 {0} 长大",
+    "cool_bad": "生育冷却中，还剩 {0}",
+    "cool_ok": "无冷却（下次冷却 {0}）",
+    "food_ok": "食物点 {0} ≥ {3}（食物值 {1} + 背包 {2}）",
+    "food_bad": "食物点 {0} < {3}（食物值 {1} + 背包 {2}），还缺 {4}",
+    "awake_ok": "清醒",
+    "awake_bad": "正在睡觉",
+    "act_ok": "当前 {0}（生效 {1}），处于空闲期",
+    "act_bad": "当前 {0}（日程 {1} / 生效 {2}），不在空闲期，还有 {3}",
+    "calm_ok": "未受惊",
+    "calm_bad": "受惊：{0}",
+    "raid_ok": "附近没有袭击",
+    "raid_bad": "正处在袭击中",
+    "bedfree_none": "{0} 格内没有床",
+    "bedfree_full": "{0} 格内 {1} 张床，但都被占满",
+    "bedfree_ok": "{0} 格内 {1} 张床，空 {2} 张",
+    "bedreach_none": "空床 {0} 张，实测 {1} 张都走不到",
+    "bedreach_ok": "实测 {0}/{1} 张空床可达",
+    "bedreach_skip": "本次未检测可达性（预算耗尽）",
+    "target_has": "配对对象 #{0} {1}（{2} 格，要求 ≤ {3}）",
+    "target_none": "{0} 格内没有配对对象",
+    "walk_busy": "有 WALK_TARGET，会阻断配对发起",
+    "walk_free": "没有移动目标",
+    "home_risk": "{0}",
+    "home_ok": "绑定床 {0}",
+    "home_none": "没有绑定床",
+    "bell_ok": "钟在 {0}",
+    "bell_bad": "没有钟（MEETING_POINT 记忆为空）",
+    "inv_full": "背包已满（{0} 格，营养点 {1}）",
+    "inv_free": "背包 {0}/{1} 格已用",
+    "conflict_ok": "没有其他村民同绑这张床",
+    "conflict_bad": "{0} 也绑在 {1}",
+    "reach_bad": "存在走不到的目标（CANT_REACH）",
+    "reach_ok": "没有走不到的目标",
+    "target_food": "对象食物不足",
+    "tag_ready": "可繁殖",
+    "tag_ready_no_target": "可繁殖（等对象）"
+  },
+  "short": {
+    "ADULT": "是婴儿",
+    "COOLDOWN": "冷却中",
+    "FOOD": "缺食物",
+    "AWAKE": "睡觉中",
+    "ACTIVITY": "非空闲期",
+    "CALM": "受惊",
+    "RAID": "袭击中",
+    "BED_FREE": "无空闲床",
+    "BED_REACH": "床走不到",
+    "TARGET": "无对象",
+    "WALK_BUSY": "移动中",
+    "HOME_BIND": "床会被丢",
+    "BELL": "无钟",
+    "INV_FULL": "背包满",
+    "BED_CONFLICT": "同床冲突",
+    "CANT_REACH": "有走不到的目标"
+  },
+  "cond": {
+    "ADULT": "成年",
+    "COOLDOWN": "生育冷却",
+    "FOOD": "食物",
+    "AWAKE": "清醒",
+    "ACTIVITY": "空闲期",
+    "CALM": "未受惊",
+    "RAID": "无袭击",
+    "BED_FREE": "有空闲床",
+    "BED_REACH": "床可达",
+    "TARGET": "配对对象",
+    "WALK_BUSY": "移动目标",
+    "HOME_BIND": "绑定床稳定",
+    "BELL": "钟（聚会点）",
+    "INV_FULL": "背包未满",
+    "BED_CONFLICT": "同床冲突",
+    "CANT_REACH": "无走不到的目标",
+    "TARGET_LOST": "对象丢失/超时",
+    "MATE_TIMEOUT": "求爱超时",
+    "SLEEPING": "求爱中睡觉",
+    "PANIC": "求爱中受惊",
+    "NO_BED": "没有床",
+    "ALL_BEDS_TAKEN": "床票全满",
+    "BED_UNREACHABLE": "床不可寻路"
+  },
+  "tag": {
+    "missing": "✕ 缺 {0}",
+    "food_missing": "缺食物{0}点",
+    "ready_full": "全部硬性条件满足"
+  },
+  "risk": {
+    "poi_gone": "床已不存在",
+    "far": "距离 {0} 格（超过 {1}）",
+    "occupied": "床被别的村民占用",
+    "tickets": "还有 {0} 张空闲票（不是独占）",
+    "unreachable": "寻路到不了"
+  },
+  "ev": {
+    "panic_hostile": "附近有 {0}（{1} 格）",
+    "hurt": "刚被攻击过",
+    "hurt_plus": "，且 HURT_BY 记忆仍在"
+  },
+  "fail": {
+    "TARGET_LOST": {
+      "detail": "求爱过程中没有靠近（双方距离始终大于 2.24 格），原版到 350 刻会放弃"
+    },
+    "MATE_TIMEOUT": {
+      "detail": "求爱跑满 {0} 刻仍未出生"
+    },
+    "SLEEPING": {
+      "detail": "求爱过程中有一方睡着了"
+    },
+    "PANIC": {
+      "detail": "求爱过程中被攻击或附近有敌对生物"
+    },
+    "NO_BED": {
+      "detail": "{0} 格内没有床 POI"
+    },
+    "ALL_BEDS_TAKEN": {
+      "detail": "{0} 张床全部满票（每张床 maxTickets=1）"
+    },
+    "BED_UNREACHABLE": {
+      "detail": "{0} 张空床都寻路不到"
+    },
+    "eaten": "【{0} 食物 {1}→{2}；{3} 食物 {4}→{5}】",
+    "wasted_food": "食物已被吃掉但没有婴儿",
+    "with_target": "（对象 #{0} {1}）"
+  },
+  "out": {
+    "courting": "求爱中",
+    "fail": "失败：{0}",
+    "birth": "生了 #{0}"
+  },
+  "list": {
+    "sep": "、",
+    "sep2": "；"
+  },
+  "prof": {
+    "none": "无业",
+    "unemployed": "失业",
+    "nitwit": "傻子（不交易）",
+    "farmer": "农民",
+    "fisherman": "渔夫",
+    "shepherd": "牧羊人",
+    "fletcher": "制箭师",
+    "librarian": "图书管理员",
+    "cartographer": "制图师",
+    "cleric": "牧师",
+    "armorer": "盔甲匠",
+    "mason": "石匠",
+    "butcher": "屠夫",
+    "leatherworker": "皮革匠",
+    "toolsmith": "工具匠",
+    "weaponsmith": "武器匠"
+  },
+  "act": {
+    "none": "无",
+    "idle": "空闲",
+    "work": "工作",
+    "meet": "聚会（钟）",
+    "rest": "睡眠",
+    "panic": "惊慌",
+    "pre_raid": "袭击预警",
+    "raid": "袭击",
+    "hide": "躲藏",
+    "play": "玩耍",
+    "core": "核心"
+  }
+}

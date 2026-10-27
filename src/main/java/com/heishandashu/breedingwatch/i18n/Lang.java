@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import net.fabricmc.loader.api.FabricLoader;
 
 /**
  * 多语言文案。
@@ -41,7 +40,7 @@ public final class Lang {
     private Lang() {}
 
     public static Path dir() {
-        return FabricLoader.getInstance().getConfigDir().resolve(VbwMod.MOD_ID).resolve("lang");
+        return com.heishandashu.breedingwatch.net.ConfigDirs.config().resolve(VbwMod.MOD_ID).resolve("lang");
     }
 
     /** 释放内置默认文件（若不存在）并载入全部语言文件。 */

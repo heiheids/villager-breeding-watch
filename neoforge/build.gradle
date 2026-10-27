@@ -1,0 +1,65 @@
+// 村民繁殖观测 / Villager Breeding Watch -- Minecraft 26.3 NeoForge
+//
+// 与 Fabric 分支的唯一差别在「加载器层」：入口、事件总线、网络注册、按键、HUD。
+// MC 那一层的代码（Eval / Views / StatsStore / Lang / Json ...）是同一份。
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version "${moddev_version}"
+}
+
+version = "${version}"
+group = "${group}"
+
+base {
+    archivesName = "${archives_base_name}-neoforge-${minecraft_version}"
+}
+
+java {
+    // 26.3 跑在 Java 25 上（与 Fabric 分支一致）
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+neoForge {
+    version = "${neoforge_version}"
+
+    mods {
+        "villagerbreedingwatch" {
+            sourceSet sourceSets.main
+        }
+    }
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = 'UTF-8'
+    it.options.release = 25
+}
+
+processResources {
+    def props = [version: project.version]
+    inputs.properties props
+    filteringCharset = 'UTF-8'
+    filesMatching('META-INF/neoforge.mods.toml') {
+        // 只用字面量替换，避免 Groovy 模板把内容改坏
+        filter { String line -> line.replace('${version}', project.version.toString()) }
+    }
+}
+
+jar {
+    manifest {
+        attributes([
+                'Specification-Title'   : 'villager-breeding-watch',
+                'Specification-Version' : project.version,
+                'Implementation-Title'  : 'villager-breeding-watch',
+                'Implementation-Version': project.version,
+        ])
+    }
+}

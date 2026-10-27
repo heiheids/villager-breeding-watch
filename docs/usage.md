@@ -17,15 +17,34 @@
 
 
 ## 二、版本与依赖
+
+模组有**两个加载器版本**，功能一致、版本号统一为 **1.1.0**，按你用的加载器选一个装：
+
+| 文件 | 加载器 | 依赖 |
+|---|---|---|
+| `villager-breeding-watch-fabric-26.3-1.1.0.jar` | Fabric | Fabric Loader 0.19.5+、Fabric API（26.3 任一版本）、Java 25 |
+| `villager-breeding-watch-neoforge-26.3-1.1.0.jar` | NeoForge | NeoForge 26.3.0.67+（26.3.0.86 实测）、Java 25 |
+
 - Minecraft：26.3（客户端与服务端都要装；单人游戏自动满足）
-- 加载器：Fabric Loader 0.19.5 或更高
-- Fabric API：必需（任何 26.3 版本均可，本包在 0.162.0 / 0.163.0 上验证）
 - Java：25（26.x 的运行时要求，启动器自动满足）
-- 模组 id：villagerbreedingwatch
+- 模组 id：`villagerbreedingwatch`（两个版本相同，**不能同时装**）
+- 两个版本的配置文件、统计数据格式完全一致，换加载器后老存档可继续沿用
+
+### 两个版本的唯一功能差异：头顶名牌
+
+| | Fabric 版 | NeoForge 版 |
+|---|---|---|
+| 头顶显示 | 原版名字 + **另加一行** `#12 ♥ 可繁殖` | **直接替换**原版名牌为 `#12 ♥ 可繁殖 原版名字` |
+
+原因：NeoForge 26.3 提供 `RenderNameTagEvent`（可替换名牌内容），
+Fabric 侧**没有**等价钩子（已逐个扫描全部 fabric-api jar 确认），
+只能用 `Gizmos.billboardTextOverMob` 额外画一行。这是引擎能力差异，不是实现取舍。
 
 
 ## 三、安装
-1. 把 `villager-breeding-watch-fabric-26.3-2.0.0.jar` 放进实例的 `mods\` 目录。
+1. 按加载器选对应的 jar，放进实例的 `mods\` 目录：
+   - Fabric：`villager-breeding-watch-fabric-26.3-1.1.0.jar`
+   - NeoForge：`villager-breeding-watch-neoforge-26.3-1.1.0.jar`
 2. 启动游戏，进入任意世界。首次运行会生成：
    - `config\villagerbreedingwatch\lang\zh_cn.json` 与 `en_us.json`（可自行编辑）
    - `config\villagerbreedingwatch\client.json`（客户端设置）
@@ -116,13 +135,15 @@
 
 
 ## 八、重要限制（如实说明，避免误判）
-1. 头顶文字的**距离限制**是引擎决定的：26.3 没有「替换原版名牌」的公共钩子
-   （Fabric 与 NeoForge 在 26.3 都没有等价事件），所以改用 26.3 自带的世界空间文字
-   （原版生物头顶文字就是这个实现的）。它要求客户端手里有这个实体：
-   村民约 5 区块（≈80 格）内才会同步到客户端，超出就画不出头顶文字。
+1. 头顶文字的**距离限制**是引擎决定的：只有客户端"已经拥有这个实体"时才画得出头顶文字，
+   村民约 5 区块（≈80 格）内才会同步到客户端，超出就画不出来。
    远处的村民请看射线 / 详情页 / 统计页。
-2. 因为无法替换原版名牌，头顶会**多出一行**本模组的文字，原版名字仍然显示。
-   这是 26.3 引擎能做的唯一方式（另一个选择是自己写 mixin 去改名牌渲染，风险与维护成本都高）。
+2. 头顶名牌的呈现方式两个版本不同：
+   - **NeoForge 版**：用 `RenderNameTagEvent` 直接替换原版名牌内容，
+     头顶只有一行 `#12 ♥ 可繁殖 原版名字`。
+   - **Fabric 版**：Fabric 侧没有等价钩子（已逐个扫描全部 fabric-api jar），
+     只能用世界空间文字额外画一行，于是头顶是「原版名字 + 本模组一行」。
+     另一条路是自己写 mixin 改名牌渲染，风险与维护成本都高，没有采用。
 3. 失败原因是**服务器侧推断**，不是原版事件：原版从不广播「这次繁殖为什么失败」。
    模组在生育窗口附近检查当时的条件（缺床 / 床不可达 / 对象丢失 / 求爱超时 / 睡觉 / 受惊 / 食物被吃），
    把最可能的原因记录下来。极端情况下可能标错，原因码可对照排查。
@@ -153,23 +174,25 @@
 3. 界面出现「等待服务器数据…」：
    - 若日志里**有** `扫描=N 名村民`：服务端在扫，是客户端没收到包（检查两端是否同版本 jar）。
    - 若日志里**没有** `扫描=N 名村民`：服务端根本没扫。历史上这个症状由两个 bug 引起，
-     已在 2.0.0 修复：
+     已在 1.1.0 修复：
        a) 用 `Long.MIN_VALUE` 当「从未扫描」哨兵，`now - last` 溢出成负数，永不扫描；
        b) 用维度时钟做节拍，下界/末地是固定时间维度（时钟恒 0），只扫一次。
      若仍复现，请把 `logs\latest.log` 发给作者。
 4. HUD 显示「（数据已停止更新）」：超过「刷新间隔 + 6 刻」没收到新数据。
-   在下界/末地若一直显示这一句，是本模组 2.0.0 之前版本用世界时间判断导致的，已修复。
+   在下界/末地若一直显示这一句，是 1.1.0 之前的开发版用世界时间判断导致的，已在 1.1.0 修复。
 5. 界面上出现英文或键名：语言文件缺键，或语言文件是旧版本释放的副本（见第七节）。
 6. 统计文件不存在不是错误，日志会写「统计文件不存在，将在退出时创建」。
 7. 连服务器看不到数据：确认服务器也装了同一个 jar（模组是双侧的，服务端负责扫描）。
 
 
 ## 十、本包内容
-- `villager-breeding-watch-fabric-26.3-2.0.0.jar`：可直接安装的模组（已装进目标实例）
+- `villager-breeding-watch-fabric-26.3-1.1.0.jar`：Fabric 版（已装进 `26.3-Fabric000`）
+- `villager-breeding-watch-neoforge-26.3-1.1.0.jar`：NeoForge 版（已装进 `26.3-NeoForge086`）
 - `使用说明.txt`：本文件
-- `技术说明.txt`：程序结构、关键 API 事实、数据格式、构建方式
-- `村民生育管理器-经验与踩坑.txt`：开发过程中值得记录的经验与踩坑（含本次事故复盘）
-- `源码\`：完整工程（src、build.gradle、settings.gradle、gradle.properties、tools）
+- `技术说明.txt`：程序结构、关键 API 事实、数据格式、构建方式、双加载器差异
+- `村民生育管理器-经验与踩坑.txt`：开发过程中值得记录的经验与踩坑（含事故复盘与双版本移植记录）
+- `源码\`：Fabric 版完整工程
+- `源码-NeoForge26.3\`：NeoForge 版完整工程（与 Fabric 版共用 17 个文件，仅加载器层不同）
   - 构建：`powershell -ExecutionPolicy Bypass -File tools\build.ps1`
   - 产物自检：`powershell -ExecutionPolicy Bypass -File tools\check-jar.ps1`
   - 源码防回归：`powershell -ExecutionPolicy Bypass -File tools\check-source.ps1`

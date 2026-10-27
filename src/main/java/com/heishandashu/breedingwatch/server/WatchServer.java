@@ -3,7 +3,9 @@ package com.heishandashu.breedingwatch.server;
 import com.heishandashu.breedingwatch.VbwMod;
 import com.heishandashu.breedingwatch.i18n.Lang;
 import com.heishandashu.breedingwatch.json.Json;
+import com.heishandashu.breedingwatch.net.PacketSender;
 import com.heishandashu.breedingwatch.net.Payloads;
+import com.heishandashu.breedingwatch.net.VbwNetworking;
 import com.heishandashu.breedingwatch.view.Views;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -14,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -300,10 +301,18 @@ public final class WatchServer {
         sendSnapshot(sp, now, level, 0, List.of(), stats, false);
     }
 
+    /**
+     * 发送一个包。
+     *
+     * <p>只依赖 {@link PacketSender} 接口：Fabric 与 NeoForge 的发送写法差异
+     * 收在各自入口注入的实现里，这样服务端扫描逻辑两个加载器共用同一份代码。</p>
+     */
     private static void send(ServerPlayer sp, net.minecraft.network.protocol.common.custom.CustomPacketPayload payload) {
-        if (ServerPlayNetworking.canSend(sp, payload.type())) {
-            ServerPlayNetworking.send(sp, payload);
+        PacketSender sender = VbwNetworking.SENDER;
+        if (sender == null) {
+            return;
         }
+        sender.send(sp, payload);
     }
 
     private static Views.VillagerView withCourting(Views.VillagerView v, PairTracker.Courting courting) {
