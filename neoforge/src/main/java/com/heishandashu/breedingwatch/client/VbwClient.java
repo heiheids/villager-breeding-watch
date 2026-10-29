@@ -107,6 +107,10 @@ public final class VbwClient {
         while (keyToggle.consumeClick()) {
             ClientHub.SETTINGS.enabled = !ClientHub.SETTINGS.enabled;
             ClientHub.SETTINGS.save();
+            if (!ClientHub.SETTINGS.enabled) {
+                // 关掉总闸：立刻清掉本地缓存，不等服务端的空快照回来
+                ClientHub.DATA.clear();
+            }
             ClientHub.pushPrefs();
         }
         ClientHub.tickWorldWatch(mc);

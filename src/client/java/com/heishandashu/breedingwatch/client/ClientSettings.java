@@ -16,7 +16,13 @@ import net.minecraft.client.Minecraft;
  */
 public final class ClientSettings {
 
-    /** 总开关：整套观测的总闸。 */
+    /**
+     * 总开关：整套观测的唯一总闸。
+     *
+     * <p>关掉时模组**完全停工**：客户端不画、不统计、不响应右键；
+     * 服务端收到 prefs 后也不再为这个玩家扫描（见 WatchServer.Prefs#active）。
+     * 「常开模式」不能绕过它。</p>
+     */
     public boolean enabled = false;
     /** 头顶名牌：村民头上显示 #编号 + ♥/✕ + 缺什么。 */
     public boolean nametags = true;
@@ -30,6 +36,8 @@ public final class ClientSettings {
     public boolean allLines = false;
     /** 常开所有头顶信息（不限半径）。 */
     public boolean allTags = false;
+    /** 右键村民打开详情页 / 交易界面按钮。关掉后右键完全不响应。 */
+    public boolean rightClick = true;
     /** 留空 = 跟随游戏语言；也可手动指定语言代码（如 en_us）。 */
     public String language = "";
     /** 扫描半径（格）。 */
@@ -57,6 +65,7 @@ public final class ClientSettings {
                 hud = d.hud();
                 allLines = d.allLines();
                 allTags = d.allTags();
+                rightClick = d.rightClick();
                 language = d.language() == null ? "" : d.language();
                 radius = Math.max(8, Math.min(112, d.radius()));
                 interval = Math.max(2, Math.min(100, d.interval()));
@@ -71,7 +80,7 @@ public final class ClientSettings {
             Path f = file();
             Files.createDirectories(f.getParent());
             Files.writeString(f, Json.GSON.toJson(new SettingsDto(enabled, nametags, bedLines, seeThrough, hud,
-                    allLines, allTags, language, radius, interval)), StandardCharsets.UTF_8);
+                    allLines, allTags, rightClick, language, radius, interval)), StandardCharsets.UTF_8);
         } catch (Exception e) {
             VbwMod.LOG.warn("[VBW] 保存客户端设置失败：{}", e.toString());
         }
@@ -104,16 +113,42 @@ public final class ClientSettings {
                 + ",\"code\":\"" + effectiveLanguage() + "\"}";
     }
 
+    /**
+     * 是否画头顶信息。
+     *
+     * <p><b>先看总闸</b>：总开关关闭时一律不画，即使「常开」是开着的。
+     * 总开关的语义是「模组不工作」，不是「少画一样东西」。</p>
+     */
     public boolean wantTags() {
-        return nametags && (enabled || allTags);
+        return enabled && nametags;
     }
 
+    /** 是否画床线。同上：总闸优先。 */
     public boolean wantLines() {
-        return bedLines && (enabled || allLines);
+        return enabled && bedLines;
+    }
+
+    /**
+     * 是否响应右键村民。
+     *
+     * <p>也要服从总闸：关掉后右键完全交给原版，不弹任何界面。</p>
+     */
+    public boolean wantRightClick() {
+        return enabled && rightClick;
+    }
+
+    /** 静态入口：总闸是否打开（供 ClientData 等无设置引用的地方判断）。 */
+    public static boolean isMasterOn() {
+        return ClientHub.SETTINGS != null && ClientHub.SETTINGS.enabled;
+    }
+
+    /** HUD 是否还有内容可显示（总闸关闭时只剩「已关闭」提示）。 */
+    public boolean hudHasContent() {
+        return enabled;
     }
 
     /** 存盘结构（public record，Gson 直接读写）。 */
     public record SettingsDto(boolean enabled, boolean nametags, boolean bedLines, boolean seeThrough,
-                              boolean hud, boolean allLines, boolean allTags, String language,
-                              int radius, int interval) {}
+                              boolean hud, boolean allLines, boolean allTags, boolean rightClick,
+                              String language, int radius, int interval) {}
 }

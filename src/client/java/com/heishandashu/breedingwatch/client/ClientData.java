@@ -45,6 +45,12 @@ public final class ClientData {
 
     public void accept(String json) {
         try {
+            // 总闸关闭：丢弃一切来的数据，保持缓存为空。
+            // 服务端本该不再推送，但换开关的那一瞬可能还有在途包，这里兜住。
+            if (!ClientSettings.isMasterOn()) {
+                clear();
+                return;
+            }
             Views.Snapshot s = Json.COMPACT.fromJson(json, Views.Snapshot.class);
             if (s == null) {
                 return;

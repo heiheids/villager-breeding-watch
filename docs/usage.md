@@ -18,12 +18,12 @@
 
 ## 二、版本与依赖
 
-模组有**两个加载器版本**，功能一致、版本号统一为 **1.1.0**，按你用的加载器选一个装：
+模组有**两个加载器版本**，功能一致、版本号统一为 **1.1.1**，按你用的加载器选一个装：
 
 | 文件 | 加载器 | 依赖 |
 |---|---|---|
-| `villager-breeding-watch-fabric-26.3-1.1.0.jar` | Fabric | Fabric Loader 0.19.5+、Fabric API（26.3 任一版本）、Java 25 |
-| `villager-breeding-watch-neoforge-26.3-1.1.0.jar` | NeoForge | NeoForge 26.3.0.67+（26.3.0.86 实测）、Java 25 |
+| `villager-breeding-watch-fabric-26.3-1.1.1.jar` | Fabric | Fabric Loader 0.19.5+、Fabric API（26.3 任一版本）、Java 25 |
+| `villager-breeding-watch-neoforge-26.3-1.1.1.jar` | NeoForge | NeoForge 26.3.0.67+（26.3.0.86 实测）、Java 25 |
 
 - Minecraft：26.3（客户端与服务端都要装；单人游戏自动满足）
 - Java：25（26.x 的运行时要求，启动器自动满足）
@@ -43,8 +43,8 @@ Fabric 侧**没有**等价钩子（已逐个扫描全部 fabric-api jar 确认�
 
 ## 三、安装
 1. 按加载器选对应的 jar，放进实例的 `mods\` 目录：
-   - Fabric：`villager-breeding-watch-fabric-26.3-1.1.0.jar`
-   - NeoForge：`villager-breeding-watch-neoforge-26.3-1.1.0.jar`
+   - Fabric：`villager-breeding-watch-fabric-26.3-1.1.1.jar`
+   - NeoForge：`villager-breeding-watch-neoforge-26.3-1.1.1.jar`
 2. 启动游戏，进入任意世界。首次运行会生成：
    - `config\villagerbreedingwatch\lang\zh_cn.json` 与 `en_us.json`（可自行编辑）
    - `config\villagerbreedingwatch\client.json`（客户端设置）
@@ -56,17 +56,22 @@ Fabric 侧**没有**等价钩子（已逐个扫描全部 fabric-api jar 确认�
 ## 四、按键（默认，可在「控制 → 按键绑定 → 村民繁殖观测」里改）
 - V：打开设置界面
 - B：打开统计界面
-- N：总开关（开 / 关整套观测，并把状态同步给服务器）
+- N：总开关。**关掉后模组完全停工**：不扫描、不统计、不画任何东西、右键村民也不再弹界面。
+  它不是「少显示一样东西」，而是把整套观测停掉（状态会同步给服务器）。
 
 
 ## 五、设置界面里有什么
-- 总开关：整套观测的总闸
+- 总开关：整套观测的**唯一总闸**。关闭后模组完全停工——服务端停止为该玩家扫描，
+  客户端清空缓存、不画名牌与射线、右键村民交还原版。
+  「常开」模式不能绕过它：总闸关着时，常开开关不起任何作用。
 - 头顶名牌：是否在村民头上显示 `#编号 ♥/✕ 缺什么`
 - 床绑定射线：是否画村民到床的线
 - 穿透显示：射线和头顶文字是否隔墙可见
 - HUD 面板：左上角的信息面板
-- 常开所有射线：不限半径，最多 600 名村民都画线
-- 常开所有头顶信息：不限半径，全部村民都计入观测
+- 右键打开详情：右键村民时是否弹出详情页（有交易的村民则是在交易界面里加按钮）。
+  关闭后右键完全交还原版，不弹任何界面。
+- 常开所有射线：不限半径，最多 600 名村民都画线（需总开关打开）
+- 常开所有头顶信息：不限半径，全部村民都计入观测（需总开关打开）
 - 扫描半径 / 刷新间隔（刻）：非「常开」模式下的扫描范围与频率
 - 重载语言：改完语言文件后立刻生效
 - 语言模式：在「跟随游戏语言」与「强制 zh_cn / en_us / 其他已安装语言」之间循环
@@ -186,8 +191,8 @@ Fabric 侧**没有**等价钩子（已逐个扫描全部 fabric-api jar 确认�
 
 
 ## 十、本包内容
-- `villager-breeding-watch-fabric-26.3-1.1.0.jar`：Fabric 版（已装进 `26.3-Fabric000`）
-- `villager-breeding-watch-neoforge-26.3-1.1.0.jar`：NeoForge 版（已装进 `26.3-NeoForge086`）
+- `villager-breeding-watch-fabric-26.3-1.1.1.jar`：Fabric 版（已装进 `26.3-Fabric000`）
+- `villager-breeding-watch-neoforge-26.3-1.1.1.jar`：NeoForge 版（已装进 `26.3-NeoForge086`）
 - `使用说明.txt`：本文件
 - `技术说明.txt`：程序结构、关键 API 事实、数据格式、构建方式、双加载器差异
 - `村民生育管理器-经验与踩坑.txt`：开发过程中值得记录的经验与踩坑（含事故复盘与双版本移植记录）
@@ -199,3 +204,12 @@ Fabric 侧**没有**等价钩子（已逐个扫描全部 fabric-api jar 确认�
   - 回归断言：`java tools\RegressionTest.java`
   - 日志诊断：`powershell -ExecutionPolicy Bypass -File tools\diag-log.ps1`
   （构建脚本会固定 JDK 25 与工程内的 GRADLE_USER_HOME，可离线构建）
+
+
+## 附：1.1.1 改了什么
+
+1. 新增设置项「右键打开详情」。关闭后右键完全交还原版，不弹详情页、交易界面也不加按钮。
+2. 总开关改为**真正的总闸**。以前它只控制默认显示路径——只要「常开」开着，
+   即使总闸关掉，服务端仍在扫描、客户端仍在绘制。现在关掉即完全停工：
+   不扫描、不绘制、不留缓存、右键也不响应。
+3. 新增带反证的可执行回归测试（tools/MasterSwitchTest.java）。

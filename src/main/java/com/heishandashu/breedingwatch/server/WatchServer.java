@@ -45,17 +45,31 @@ public final class WatchServer {
     public static final String OUT_BIRTH = "birth:#";
 
     /** 单个玩家的观测偏好。 */
-    public record Prefs(boolean enabled, int radius, int interval, boolean allLines, boolean allTags, String lang) {
-        public static final Prefs DEFAULT = new Prefs(false, 48, 10, false, false, null);
+    public record Prefs(boolean enabled, int radius, int interval, boolean allLines, boolean allTags,
+                        boolean rightClick, String lang) {
+        public static final Prefs DEFAULT =
+                new Prefs(false, 48, 10, false, false, true, null);
 
-        /** 任意一层需要显示时必须扫描（常开模式不看总开关）。 */
+        /**
+         * 是否需要为这个玩家扫描。
+         *
+         * <p><b>总开关是唯一总闸</b>：{@code enabled=false} 时一律不扫，
+         * 即使「常开模式」是开着的。总开关的语义是「模组不工作」，
+         * 不是「少显示一样东西」——所以不能写成
+         * {@code enabled || allLines || allTags}（那会让常开绕过总闸）。</p>
+         */
         public boolean active() {
-            return enabled || allLines || allTags;
+            return enabled;
         }
 
-        /** 常开模式：不受总开关影响，扫描范围与上限都放宽。 */
+        /** 常开模式：只在总闸打开时生效，放宽扫描范围与上限。 */
         public boolean allMode() {
-            return allLines || allTags;
+            return enabled && (allLines || allTags);
+        }
+
+        /** 是否允许右键打开村民信息。 */
+        public boolean allowRightClick() {
+            return enabled && rightClick;
         }
     }
 
@@ -80,7 +94,7 @@ public final class WatchServer {
     // ------------------------------------------------------------------ 客户端指令
 
     private record CmdMsg(String c, Boolean enabled, Integer radius, Integer interval, Integer eid,
-                          Boolean allLines, Boolean allTags, String code) {}
+                          Boolean allLines, Boolean allTags, Boolean rightClick, String code) {}
 
     /** 玩家进世界：主动要求客户端把开关重发一遍（避免时序上丢包导致服务器一直用默认关）。 */
     public static void onPlayerJoin(ServerPlayer sp) {
@@ -118,18 +132,19 @@ public final class WatchServer {
                 String lang = m.code() != null ? Lang.normalize(m.code())
                         : (old != null ? old.lang() : null);
                 PREFS.put(sp.getUUID(), new Prefs(Boolean.TRUE.equals(m.enabled()), radius, interval,
-                        Boolean.TRUE.equals(m.allLines()), Boolean.TRUE.equals(m.allTags()), lang));
+                        Boolean.TRUE.equals(m.allLines()), Boolean.TRUE.equals(m.allTags()),
+                        !Boolean.FALSE.equals(m.rightClick()), lang));
                 LAST_SCAN.remove(sp.getUUID());     // 开关变了：下一 tick 立刻扫一次，不用等间隔
-                VbwMod.LOG.info("[VBW] 收到 {} 的开关：总开关={} 常开射线={} 常开名牌={} 半径={} 间隔={} 语言={}",
+                VbwMod.LOG.info("[VBW] 收到 {} 的开关：总开关={} 常开射线={} 常开名牌={} 右键={} 半径={} 间隔={} 语言={}",
                         sp.getName().getString(), Boolean.TRUE.equals(m.enabled()),
                         Boolean.TRUE.equals(m.allLines()), Boolean.TRUE.equals(m.allTags()),
-                        radius, interval, lang);
+                        !Boolean.FALSE.equals(m.rightClick()), radius, interval, lang);
             }
             case "lang" -> {
                 Prefs old = PREFS.getOrDefault(sp.getUUID(), Prefs.DEFAULT);
                 String lang = Lang.normalize(m.code());
                 PREFS.put(sp.getUUID(), new Prefs(old.enabled(), old.radius(), old.interval(), old.allLines(),
-                        old.allTags(), lang));
+                        old.allTags(), old.rightClick(), lang));
                 Lang.use(lang);
                 try {
                     sendStats(sp);

@@ -15,6 +15,7 @@
       "line": "Bed link rays",
       "thru": "See through walls",
       "hud": "Top-left HUD panel",
+      "rightclick": "Right-click villager opens details",
       "allline": "Always draw all rays (no radius)",
       "alltag": "Always show all name tags"
     },

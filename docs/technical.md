@@ -2,7 +2,8 @@
 适用环境：Minecraft 26.3 · JDK 25 · Gradle 9.7.1
   Fabric 支：Fabric Loader 0.19.5 · Fabric API 0.162.0+26.3 · Loom 1.18.4
   NeoForge 支：NeoForge 26.3.0.67-beta（编译）/ 26.3.0.86（实测运行）· ModDevGradle 2.0.148
-统一版本号：1.1.0
+  1.21.1 支：NeoForge 21.1.256 · JDK 21
+统一版本号：1.1.1
 
 ## 一、设计原则
 1. 模块化，禁止单页面海量代码。一个包一类职责，任何单个文件不承载两件事：
@@ -20,20 +21,26 @@
    都能被 Fabric 与 NeoForge 两个加载器**共用同一份代码**。
 
 
-## 一之二、双加载器分支对照
+## 一之二、三分支对照
 
-| | Fabric 版 | NeoForge 版 |
-|---|---|---|
-| 工程目录 | `源码\` | `源码-NeoForge26.3\` |
-| 产物 | `...-fabric-26.3-1.1.0.jar` | `...-neoforge-26.3-1.1.0.jar` |
-| 构建插件 | `net.fabricmc.fabric-loom` 1.18.4 | `net.neoforged.moddev` 2.0.148 |
-| 编译目标 | Fabric API 0.162.0+26.3 | NeoForge 26.3.0.67-beta（运行 0.86 实测） |
-| 源码集 | main + client 分离 | 单一 main（客户端类在 `client/` 包，靠 side 判断不加载） |
-| 入口 | `fabric.mod.json` entrypoints | `@Mod` + `META-INF/neoforge.mods.toml` |
-| 事件总线 | 单一（Fabric API 的 Callback） | mod bus + game bus 两条 |
-| 网络 codec 缓冲区 | `StreamCodec<ByteBuf, T>` | `StreamCodec<RegistryFriendlyByteBuf, T>` |
-| 头顶名牌 | `Gizmos` 额外一行 | `RenderNameTagEvent` 替换原版内容 |
-| 共用文件数 | 17 / 28 | 17 / 28 |
+| 项目 | Fabric 26.3 | NeoForge 26.3 | NeoForge 1.21.1 |
+|---|---|---|---|
+| 工程目录 | `源码\` | `源码-NeoForge26.3\` | `源码-NeoForge1.21.1\` |
+| 产物 | `...-fabric-26.3-1.1.1.jar` | `...-neoforge-26.3-1.1.1.jar` | `...-neoforge-1.21.1-1.1.1.jar` |
+| 包名 | `com.heishandashu` | 同 Fabric | `com.vbw` |
+| 构建插件 | `fabric-loom` 1.18.4 | `moddev` 2.0.148 | `moddev` 2.0.148 |
+| 编译目标 | Fabric API 0.162.0+26.3 | NeoForge 26.3.0.67-beta | NeoForge 21.1.256 |
+| JDK | 25 | 25 | **21** |
+| 源码集 | main + client 分离 | 单一 main | 单一 main |
+| 入口 | `fabric.mod.json` | `@Mod` + `mods.toml` | 同 NeoForge 26.3 |
+| 事件总线 | 单一（Callback） | mod bus + game bus | mod bus + game bus |
+| 界面渲染 | `extractRenderState` | `extractRenderState` | `render`（旧模型） |
+| 世界绘制 | `Gizmos` | `RenderLevelStageEvent` 子类 | 同 NeoForge 26.3 |
+| 头顶名牌 | `Gizmos` 额外一行 | `RenderNameTagEvent.CanRender` | `RenderNameTagEvent`（扁平类） |
+| 食物点 | `DataComponents.VILLAGER_FOOD` | 同左 | `Villager.FOOD_POINTS` |
+| 作息 | 数据包 timeline | 同左 | `Brain#getSchedule()` |
+| 网络 codec | `ByteBuf` | `RegistryFriendlyByteBuf` | `FriendlyByteBuf` |
+| 共用文件数 | 17 / 28 | 17 / 28 | 与 26.3 不共用 |
 
 **修改共享逻辑时的纪律**：改完 Fabric 支必须把对应文件同步到 NeoForge 支（反之亦然），
 否则两个版本会静默分叉。共享清单见 `docs/lessons.md` 第 27 条。

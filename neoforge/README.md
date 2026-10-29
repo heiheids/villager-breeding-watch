@@ -1,6 +1,6 @@
 # NeoForge 26.3 分支
 
-村民繁殖观测的 NeoForge 版本，与仓库根目录的 Fabric 版**功能一致、版本号统一**（1.1.0）。
+村民繁殖观测的 NeoForge 版本，与仓库根目录的 Fabric 版**功能一致、版本号统一**（1.1.1）。
 
 ## 为什么要独立成子工程
 
@@ -35,7 +35,7 @@ powershell -ExecutionPolicy Bypass -File tools/build.ps1 -Offline   # 缓存已�
 powershell -ExecutionPolicy Bypass -File tools/check-jar.ps1
 ```
 
-产物：`build/libs/villager-breeding-watch-neoforge-26.3-1.1.0.jar`
+产物：`build/libs/villager-breeding-watch-neoforge-26.3-1.1.1.jar`
 
 ## 版本坐标
 

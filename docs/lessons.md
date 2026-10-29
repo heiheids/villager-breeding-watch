@@ -335,6 +335,88 @@ MC 那一层（`Eval` / `Views` / `StatsStore` / `Cond` / `Lang` / `Json` / 三�
     两侧都要在自检脚本里断言入口类真的在 jar 里。
 
 
+## 二之三、总开关的语义：用户说「关掉」就是「别工作」
+
+用户原话：「主开关的作用是关闭所有功能，而不是显示问题，是模组就不工作了。」
+
+这句话点出了一个很典型的**语义错位**：在实现者眼里，「总开关」常常被写成
+「多个显示开关里的一个」；但在用户眼里，它是「这个模组还在不在」。
+
+### 错误的写法（本工程真实存在过）
+
+```java
+// ClientSettings
+public boolean wantTags() {
+    return nametags && (enabled || allTags);   // ← 常开能绕过总闸
+}
+
+// WatchServer.Prefs
+public boolean active() {
+    return enabled || allLines || allTags;      // ← 常开能绕过总闸
+}
+```
+
+后果：用户把总开关关掉，但「常开所有射线」还开着，
+于是**服务端仍在每 10 刻扫描全村、客户端仍在画线**。
+用户看到的是「我明明关了，它还在跑」——而代码里 `enabled` 确实是 false。
+
+### 正确的语义
+
+总闸必须**优先于**所有其他开关，且不能有任何旁路：
+
+```java
+// 客户端：先看总闸
+public boolean wantTags()  { return enabled && nametags; }
+public boolean wantLines() { return enabled && bedLines; }
+public boolean wantRightClick() { return enabled && rightClick; }
+
+// 服务端：总闸是唯一判据
+public boolean active()  { return enabled; }
+public boolean allMode() { return enabled && (allLines || allTags); }
+public boolean allowRightClick() { return enabled && rightClick; }
+```
+
+配套的三件事（缺一不可）：
+1. **服务端停止扫描**：`active()` 只看 `enabled`，不再为这个玩家计算任何东西
+2. **客户端清缓存**：关闸的瞬间 `DATA.clear()`，不等服务端的空快照回来
+3. **在途包兜底**：`ClientData.accept()` 里再判一次总闸，丢弃并清空（换开关的一瞬可能有在途包）
+
+### 为什么容易写错
+
+`enabled || allLines || allTags` 这种写法在「让每个开关都能独立工作」的直觉下是**合理的**，
+而且它有真实用途：用户可能只想开常开射线、不想开总开关。
+但这个直觉把「总开关」降级成了「项目符号」，
+而用户对「总开关」的心智模型是「电源」。
+
+**判据**：问自己「用户关掉它时，期望的是什么？」
+- 如果是「少看一样东西」→ 它是子开关
+- 如果是「这东西别再烦我」→ 它是总闸，必须能切断一切
+
+### 验证方式（可执行）
+
+写一个真值表测试，并且**带反证**：
+
+```bash
+java tools/MasterSwitchTest.java
+```
+
+- 反证：旧逻辑在「总闸关 + 常开开」时必须表现为「仍在工作」（证明这个 bug 真实存在）
+- 正证：新逻辑在总闸关时必须 `wantTags=false && wantLines=false && active=false`
+
+这条测试留在了 `tools/MasterSwitchTest.java`，改总开关语义时先跑它。
+
+### 附带的一个产品决定
+
+「右键打开村民信息」原本是**无条件**的（只要装了模组就有）。
+用户要求能关掉，于是加了独立开关 `rightClick`，且**同样服从总闸**：
+
+- `rightClick=false`：右键完全交还原版，交易界面里也不加按钮
+- `enabled=false`：即使 `rightClick=true` 也不响应
+
+服务端在 `UseEntityCallback` / `PlayerInteractEvent.EntityInteract` 里判一次，
+客户端在 `onUi()` 里再判一次（双保险，防止旧包或时序问题）。
+
+
 ## 三、迁移中"看起来能用、其实没生效"的陷阱
 
 17. **客户端入口点必须写进 `fabric.mod.json`。**

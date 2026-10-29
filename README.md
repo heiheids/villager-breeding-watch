@@ -35,12 +35,12 @@ Minecraft **26.3** · Fabric · 中英双语
 
 ## 安装
 
-模组有**两个加载器版本**，功能一致、版本号统一为 `1.1.0`，按你用的加载器选一个装：
+模组有**两个加载器版本**，功能一致、版本号统一为 `1.1.1`，按你用的加载器选一个装：
 
 | 文件 | 加载器 | 依赖 |
 |---|---|---|
-| `villager-breeding-watch-fabric-26.3-1.1.0.jar` | Fabric | Fabric Loader 0.19.5+ / Fabric API（26.3 任一版本） |
-| `villager-breeding-watch-neoforge-26.3-1.1.0.jar` | NeoForge | NeoForge 26.3.0.67+（26.3.0.86 实测） |
+| `villager-breeding-watch-fabric-26.3-1.1.1.jar` | Fabric | Fabric Loader 0.19.5+ / Fabric API（26.3 任一版本） |
+| `villager-breeding-watch-neoforge-26.3-1.1.1.jar` | NeoForge | NeoForge 26.3.0.67+（26.3.0.86 实测） |
 
 1. 按加载器选对应的 jar，放进 `mods/`
 2. 需要 **Java 25**

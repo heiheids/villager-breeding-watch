@@ -97,6 +97,11 @@ public final class ServerHooks {
         if (!(event.getTarget() instanceof Villager v)) {
             return;
         }
+        // 总闸关闭、或玩家关掉了「右键打开村民信息」：完全交给原版，不弹任何界面
+        if (!WatchServer.prefsOf(sp.getUUID()).allowRightClick()) {
+            event.setCancellationResult(InteractionResult.PASS);
+            return;
+        }
         try {
             WatchServer.STATS.load(sp.level().getServer());
             String ui = (v.getOffers() != null && !v.getOffers().isEmpty())

@@ -13,6 +13,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# 期望版本号从 gradle.properties 读，避免每次升版本都要改本脚本
+$ExpectedVersion = (Select-String -Path (Join-Path $Root 'gradle.properties') -Pattern '^version=(.+)$').Matches.Groups[1].Value.Trim()
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 if (-not $Jar) {
@@ -46,7 +49,7 @@ try {
         $toml = $r.ReadToEnd(); $r.Close()
 
         Check ($toml -match 'modId\s*=\s*"villagerbreedingwatch"') 'modId 正确'
-        Check ($toml -match 'version\s*=\s*"1\.1\.0"') '版本号是 1.1.0（与 Fabric 支一致）'
+        Check ($toml -match ([regex]::Escape("version = ""$ExpectedVersion"""))) "版本号是 $ExpectedVersion"
         Check ($toml -match 'authors\s*=\s*"黑山大叔"') '作者信息已写入'
         Check ($toml -match '19428259') '主页已写入'
         Check ($toml -match 'modId\s*=\s*"neoforge"') 'neoforge 依赖已声明'

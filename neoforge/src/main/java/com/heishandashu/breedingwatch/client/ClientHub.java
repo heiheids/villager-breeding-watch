@@ -90,6 +90,10 @@ public final class ClientHub {
                 pushPrefs();      // 服务端要求重发（进世界 / 换维度之后）
                 return;
             }
+            // 总闸关闭：不响应任何「打开界面」指令，右键就当没有这个模组
+            if (!SETTINGS.wantRightClick()) {
+                return;
+            }
             if (m.eid() == null) {
                 return;
             }

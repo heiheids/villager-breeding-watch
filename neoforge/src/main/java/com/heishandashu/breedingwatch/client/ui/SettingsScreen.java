@@ -23,6 +23,7 @@ public final class SettingsScreen extends Screen {
     private static final String TOGGLE_LINE = "ui.t.line";
     private static final String TOGGLE_THRU = "ui.t.thru";
     private static final String TOGGLE_HUD = "ui.t.hud";
+    private static final String TOGGLE_RCLICK = "ui.t.rightclick";
     private static final String TOGGLE_ALLLINE = "ui.t.allline";
     private static final String TOGGLE_ALLTAG = "ui.t.alltag";
 
@@ -93,7 +94,12 @@ public final class SettingsScreen extends Screen {
         int pitch = twoCol ? 21 : 19;
         int ly = 26;
 
-        this.addRenderableWidget(mk(TOGGLE_MAIN, s.enabled, lx, ly, w, () -> s.enabled = !s.enabled));
+        this.addRenderableWidget(mk(TOGGLE_MAIN, s.enabled, lx, ly, w, () -> {
+            s.enabled = !s.enabled;
+            if (!s.enabled) {
+                ClientHub.DATA.clear();     // 关闸即清缓存，不在等空快照
+            }
+        }));
         ly += pitch;
         this.addRenderableWidget(mk(TOGGLE_TAG, s.nametags, lx, ly, w, () -> s.nametags = !s.nametags));
         ly += pitch;
@@ -102,6 +108,8 @@ public final class SettingsScreen extends Screen {
         this.addRenderableWidget(mk(TOGGLE_THRU, s.seeThrough, lx, ly, w, () -> s.seeThrough = !s.seeThrough));
         ly += pitch;
         this.addRenderableWidget(mk(TOGGLE_HUD, s.hud, lx, ly, w, () -> s.hud = !s.hud));
+        ly += pitch;
+        this.addRenderableWidget(mk(TOGGLE_RCLICK, s.rightClick, lx, ly, w, () -> s.rightClick = !s.rightClick));
 
         // 窄屏（GUI 比例大 / 窗口小）时改为单列往下排，避免两组开关叠在一起点不到
         int ry = twoCol ? 26 : ly + pitch;

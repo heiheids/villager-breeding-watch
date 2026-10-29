@@ -49,7 +49,8 @@ public final class HUD implements HudElement {
         int x = PAD_X;
         int y = PAD_Y;
         int lineH = mc.font.lineHeight + 2;
-        boolean anyOn = s.enabled || s.allLines || s.allTags;
+        // 总开关是唯一总闸：关闭后 HUD 只显示一行提示，不再展示任何数据
+        boolean anyOn = s.enabled;
         int rows = anyOn ? 6 : 3;
         g.fill(x - 2, y - 2, x + BOX_W, y - 2 + rows * lineH + 4, 0x70000000);
 
